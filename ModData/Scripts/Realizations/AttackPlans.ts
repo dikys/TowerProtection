@@ -116,14 +116,14 @@ export class AttackPlan_1 extends IAttackPlan {
         difficult_waveTime[2] = 0.35*50*60;
 
         var difficult_unitsCountCoeffFunc = [
-            (waveNum) => { return 1.0 + 0.25*(waveNum); },
-            (waveNum) => { return 1.0 + 0.20*(waveNum); },
-            (waveNum) => { return 1.0 + 0.15*(waveNum); }
+            (waveNum: number) => { return 1.0 + 0.25*(waveNum); },
+            (waveNum: number) => { return 1.0 + 0.20*(waveNum); },
+            (waveNum: number) => { return 1.0 + 0.15*(waveNum); }
         ];
         var difficult_legendaryUnitsCountCoeffFunc = [
-            (waveNum) => { return 1.0 + 0.14*(waveNum); },
-            (waveNum) => { return 1.0 + 0.14*(waveNum); },
-            (waveNum) => { return 1.0 + 0.14*(waveNum); }
+            (waveNum: number) => { return 1.0 + 0.14*(waveNum); },
+            (waveNum: number) => { return 1.0 + 0.14*(waveNum); },
+            (waveNum: number) => { return 1.0 + 0.14*(waveNum); }
         ];
 
         var waveNum  = 0;

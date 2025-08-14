@@ -19,7 +19,7 @@ export function CreateBulletConfig(baseConfigUid: string, newConfigUid: string) 
     }
     return HordeContentApi.CloneConfig(HordeContentApi.GetBulletConfig(baseConfigUid), newConfigUid);
 }
-
+//@ts-ignore
 export function unitCanBePlacedByRealMap(uCfg, x, y) {
     return uCfg.CanBePlacedByRealMap(ActiveScena.GetRealScena(), x, y, false, true);
 }
@@ -37,6 +37,7 @@ export function L1Distance(x1: number, y1: number, x2: number, y2: number) {
 }
 
 const SpawnUnitParameters = HordeClassLibrary.World.Objects.Units.SpawnUnitParameters;
+//@ts-ignore
 export function spawnUnits(settlement, uCfg, uCount, direction, generator) {
     let spawnParams = new SpawnUnitParameters();
     spawnParams.ProductUnitConfig = uCfg;
@@ -52,6 +53,7 @@ export function spawnUnits(settlement, uCfg, uCount, direction, generator) {
 
     return outSpawnedUnits;
 }
+//@ts-ignore
 export function spawnUnit(settlement, uCfg, direction, position) {
     if (unitCanBePlacedByRealMap(uCfg, position.X, position.Y)) {
         let spawnParams = new SpawnUnitParameters();
@@ -64,6 +66,7 @@ export function spawnUnit(settlement, uCfg, direction, position) {
     }
 }
 
+//@ts-ignore
 export function* generateRandomCellInRect(rectX, rectY, rectW, rectH) {
     let scenaWidth = ActiveScena.GetRealScena().Size.Width;
     let scenaHeight = ActiveScena.GetRealScena().Size.Height;
@@ -110,11 +113,13 @@ export function CfgAddUnitProducer(Cfg: any) {
     }
 }
 
+//@ts-ignore
 export function setUnitStateWorker(plugin, unitCfg, unitState, workerFunc) {
     //const workerName = `${plugin.name}_${unitState}Worker`
     const workerName = `${unitCfg.Uid}_worker`
 
     // Обертка для метода из плагина, чтобы работал "this"
+    //@ts-ignore
     const workerWrapper = (u) => workerFunc.call(plugin, u);
 
     // Прокидываем доступ к функции-обработчику в .Net через глобальную переменную

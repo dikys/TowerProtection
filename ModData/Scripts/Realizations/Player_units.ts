@@ -257,7 +257,7 @@ export class Player_TOWER_CHOISE_DIFFICULT extends IUnit {
         setUnitStateWorker(GlobalVars.plugin, GlobalVars.configs[this.CfgUid], UnitState.Produce, this.stateWorker_Produce);
     }
 
-    private static stateWorker_Produce (u) {
+    private static stateWorker_Produce (u: any) {
         if(u.Owner.Resources.TakeResourcesIfEnough(u.OrdersMind.ActiveOrder.ProductUnitConfig.CostResources)) {
             u.ScriptData.TowerProtection_ProductUnitConfig = u.OrdersMind.ActiveOrder.ProductUnitConfig;
         }
@@ -321,7 +321,7 @@ export class Player_TOWER_CHOISE_ATTACKPLAN extends IUnit {
         setUnitStateWorker(GlobalVars.plugin, GlobalVars.configs[this.CfgUid], UnitState.Produce, this.stateWorker_Produce);
     }
 
-    private static stateWorker_Produce (u) {
+    private static stateWorker_Produce (u: any) {
         if(u.Owner.Resources.TakeResourcesIfEnough(u.OrdersMind.ActiveOrder.ProductUnitConfig.CostResources)) {
             u.ScriptData.TowerProtection_ProductUnitConfig = u.OrdersMind.ActiveOrder.ProductUnitConfig;
         }

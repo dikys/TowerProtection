@@ -42,9 +42,12 @@ export class IAttackPlan {
         var unitsTotalCount = {};
         for (var wave of GlobalVars.attackPlan.waves) {
             for (var waveUnit of wave.waveUnits) {
+                // @ts-ignore
                 if (unitsTotalCount[waveUnit.unitClass.CfgUid] == undefined) {
+                    // @ts-ignore
                     unitsTotalCount[waveUnit.unitClass.CfgUid] = 0;
                 }
+                // @ts-ignore
                 unitsTotalCount[waveUnit.unitClass.CfgUid] += waveUnit.count;
             }
         }

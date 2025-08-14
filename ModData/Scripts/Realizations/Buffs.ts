@@ -68,47 +68,47 @@ export class Buff_DigMoat extends IBuff {
         } 
 
         // 1 линия // 122 151 152 123 125
-        this._SetTile(createPoint(waterRectangle.X - 2, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs[122]);
-        this._SetTile(createPoint(waterRectangle.X - 1, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs[151]);
+        this._SetTile(createPoint(waterRectangle.X - 2, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(122));
+        this._SetTile(createPoint(waterRectangle.X - 1, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(151));
         for (var x = waterRectangle.X; x < waterRectangle.X + waterRectangle.W; x++)
-        this._SetTile(createPoint(x, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs[152]);
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs[123]);
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs[125]);
+        this._SetTile(createPoint(x, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(152));
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(123));
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, waterRectangle.Y - 2), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(125));
         // 2 линия // 126  22  10  23 128
-        this._SetTile(createPoint(waterRectangle.X - 2, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs[126]);
-        this._SetTile(createPoint(waterRectangle.X - 1, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs[22]);
+        this._SetTile(createPoint(waterRectangle.X - 2, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(126));
+        this._SetTile(createPoint(waterRectangle.X - 1, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(22));
         for (var x = waterRectangle.X; x < waterRectangle.X + waterRectangle.W; x++)
-        this._SetTile(createPoint(x, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs[10]);
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs[23]);
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs[128]);
+        this._SetTile(createPoint(x, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(10));
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(23));
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, waterRectangle.Y - 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(128));
         // 3 линия // 126  38   3  16 147
         for (var y = waterRectangle.Y; y < waterRectangle.Y + waterRectangle.H; y++)
-        this._SetTile(createPoint(waterRectangle.X - 2, y), ActiveScena.GetRealScena().Tileset.TileConfigs[126]);
+        this._SetTile(createPoint(waterRectangle.X - 2, y), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(126));
         for (var y = waterRectangle.Y; y < waterRectangle.Y + waterRectangle.H; y++)
-        this._SetTile(createPoint(waterRectangle.X - 1, y), ActiveScena.GetRealScena().Tileset.TileConfigs[38]);
+        this._SetTile(createPoint(waterRectangle.X - 1, y), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(38));
         for (var x = waterRectangle.X; x < waterRectangle.X + waterRectangle.W; x++) {
             for (var y = waterRectangle.Y; y < waterRectangle.Y + waterRectangle.H; y++) {
-                this._SetTile(createPoint(x, y), ActiveScena.GetRealScena().Tileset.TileConfigs[1]);
+                this._SetTile(createPoint(x, y), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(1));
             }
         }
         for (var y = waterRectangle.Y; y < waterRectangle.Y + waterRectangle.H; y++)
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, y), ActiveScena.GetRealScena().Tileset.TileConfigs[16]);
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, y), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(16));
         for (var y = waterRectangle.Y; y < waterRectangle.Y + waterRectangle.H; y++)
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, y), ActiveScena.GetRealScena().Tileset.TileConfigs[147]);
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, y), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(147));
         // 4 линия // 127  18  20  25 128
-        this._SetTile(createPoint(waterRectangle.X - 2, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs[127]);
-        this._SetTile(createPoint(waterRectangle.X - 1, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs[18]);
+        this._SetTile(createPoint(waterRectangle.X - 2, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(127));
+        this._SetTile(createPoint(waterRectangle.X - 1, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(18));
         for (var x = waterRectangle.X; x < waterRectangle.X + waterRectangle.W; x++)
-        this._SetTile(createPoint(x, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs[20]);
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs[25]);
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs[128]);
+        this._SetTile(createPoint(x, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(20));
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(25));
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, waterRectangle.Y + waterRectangle.H), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(128));
         // 5 линия // 130 143 144 143 134
-        this._SetTile(createPoint(waterRectangle.X - 2, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs[130]);
-        this._SetTile(createPoint(waterRectangle.X - 1, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs[143]);
+        this._SetTile(createPoint(waterRectangle.X - 2, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(130));
+        this._SetTile(createPoint(waterRectangle.X - 1, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(143));
         for (var x = waterRectangle.X; x < waterRectangle.X + waterRectangle.W; x++)
-        this._SetTile(createPoint(x, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs[144]);
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs[143]);
-        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs[134]);
+        this._SetTile(createPoint(x, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(144));
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(143));
+        this._SetTile(createPoint(waterRectangle.X + waterRectangle.W + 1, waterRectangle.Y + waterRectangle.H + 1), ActiveScena.GetRealScena().Tileset.TileConfigs.Item.get(134));
 
         // не работает
 
@@ -466,7 +466,9 @@ export class DefenderUnit extends IUnit {
     static CfgUid      : string = "";
     static BaseCfgUid  : string = "";
 
+    //@ts-ignore
     patrolRadius       : number;
+    //@ts-ignore
     patrolMaxRadius    : number;
 
     constructor (unit: any, teamNum: number) {
@@ -593,15 +595,20 @@ export class IBuff_Defender_Unit extends IBuff {
     static PatrolRadius        :   number = 4;
     static PatrolMaxRadius     :   number = 10;
 
+    //@ts-ignore
     defenderDeadTickNum        :   number;
+    //@ts-ignore
     defenderUnit               :   DefenderUnit | null;
+    //@ts-ignore
     defenderKillsCounter       :   number;
+    //@ts-ignore
     defenderCurrLevel          :   number;
 
     constructor(teamNum: number) {
         super(teamNum);
 
-        var TeamsDefenderLevel = this.constructor['TeamsDefenderLevel'];
+        const ctor = this.constructor as typeof IBuff_Defender_Unit;
+        const TeamsDefenderLevel = ctor.TeamsDefenderLevel;
 
         // если CFG инициализирован, тогда прокачиваем его и удаляем бафф
         if (TeamsDefenderLevel[this.teamNum] != 0) {
@@ -610,7 +617,7 @@ export class IBuff_Defender_Unit extends IBuff {
         } else {
             TeamsDefenderLevel[this.teamNum]++;
             this.defenderUnit           = null;
-            this.defenderDeadTickNum    = GlobalVars.gameTickNum - GlobalVars.gameStateChangedTickNum;
+            this.defenderDeadTickNum    = GlobalVars.gameTickNum - ctor.DefenderRespawnTime; // Initial respawn is immediate
             this.defenderKillsCounter   = 0;
             this.defenderCurrLevel      = 1;
 
@@ -656,7 +663,8 @@ export class IBuff_Defender_Unit extends IBuff {
     }
 
     public OnEveryTick(gameTickNum: number) {
-        var defenderLevel     = this.constructor['TeamsDefenderLevel'][this.teamNum];
+        const ctor = this.constructor as typeof IBuff_Defender_Unit;
+        const defenderLevel = ctor.TeamsDefenderLevel[this.teamNum];
 
         // если защитника прокачали
         if (this.defenderUnit != null && this.defenderCurrLevel != defenderLevel) {
@@ -670,7 +678,7 @@ export class IBuff_Defender_Unit extends IBuff {
             spawnDecoration(ActiveScena.GetRealScena(), HordeContentApi.GetVisualEffectConfig("#VisualEffectConfig_LittleDust"), this.defenderUnit.unit.Position);
 
             this.defenderUnit.needDeleted = true;
-            this.defenderDeadTickNum      = gameTickNum - this.constructor['DefenderRespawnTime'];
+            this.defenderDeadTickNum      = gameTickNum - ctor.DefenderRespawnTime;
             this.defenderKillsCounter     = this.defenderUnit.unit.KillsCounter;
             this.defenderUnit             = null;
         }
@@ -678,25 +686,25 @@ export class IBuff_Defender_Unit extends IBuff {
         // если защитник умер
         if (this.defenderUnit == null) {
             // пришло время для спавна
-            if (this.defenderDeadTickNum + this.constructor['DefenderRespawnTime'] <= gameTickNum) {
+            if (this.defenderDeadTickNum + ctor.DefenderRespawnTime <= gameTickNum) {
                 var towerCell       = GlobalVars.teams[this.teamNum].towerCell;
                 var generator       = generateCellInSpiral(towerCell.X, towerCell.Y);
 
                 // создаем конфиг, если нет
-                var defenderCfgUid    = this.constructor['DefenderCfgBaseUid'] + "_level_" + defenderLevel;
+                var defenderCfgUid    = ctor.DefenderCfgBaseUid + "_level_" + defenderLevel;
                 var defenderCfg : any = null;
                 if (!HordeContentApi.HasUnitConfig(defenderCfgUid)) {
-                    defenderCfg = HordeContentApi.CloneConfig(HordeContentApi.GetUnitConfig(this.constructor['DefenderCfgBaseUid']), defenderCfgUid);
+                    defenderCfg = HordeContentApi.CloneConfig(HordeContentApi.GetUnitConfig(ctor.DefenderCfgBaseUid), defenderCfgUid);
 
-                    ScriptUtils.SetValue(defenderCfg, "MaxHealth", Math.floor(defenderLevel*this.constructor['Upgrade_HP']));
-                    ScriptUtils.SetValue(defenderCfg.MainArmament.ShotParams, "Damage", Math.floor(defenderLevel*this.constructor['Upgrade_Damage']));
-                    if (this.constructor['Upgrade_Shield'] > 0) {
-                        ScriptUtils.SetValue(defenderCfg, "Shield", Math.floor(defenderLevel*this.constructor['Upgrade_Shield']));
+                    ScriptUtils.SetValue(defenderCfg, "MaxHealth", Math.floor(defenderLevel * ctor.Upgrade_HP));
+                    ScriptUtils.SetValue(defenderCfg.MainArmament.ShotParams, "Damage", Math.floor(defenderLevel * ctor.Upgrade_Damage));
+                    if (ctor.Upgrade_Shield > 0) {
+                        ScriptUtils.SetValue(defenderCfg, "Shield", Math.floor(defenderLevel * ctor.Upgrade_Shield));
                     }
-                    if (this.constructor['Upgrade_ImmuneFire'] <= defenderLevel) {
+                    if (ctor.Upgrade_ImmuneFire > 0 && ctor.Upgrade_ImmuneFire <= defenderLevel) {
                         ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.FireResistant));
                     }
-                    if (this.constructor['Upgrade_ImmuneMagic'] <= defenderLevel) {
+                    if (ctor.Upgrade_ImmuneMagic > 0 && ctor.Upgrade_ImmuneMagic <= defenderLevel) {
                         ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.MagicResistant));
                     }
                 } else {
@@ -710,8 +718,8 @@ export class IBuff_Defender_Unit extends IBuff {
                     UnitDirection.Down,
                     generator)[0], this.teamNum);
                 // задаем параметры
-                this.defenderUnit.patrolRadius      = this.constructor['PatrolRadius'];
-                this.defenderUnit.patrolMaxRadius   = this.constructor['PatrolMaxRadius'];
+                this.defenderUnit.patrolRadius      = ctor.PatrolRadius;
+                this.defenderUnit.patrolMaxRadius   = ctor.PatrolMaxRadius;
                 this.defenderUnit.unit.KillsCounter = this.defenderKillsCounter;
                 // добавляем в обработчик
                 GlobalVars.units.push(this.defenderUnit);
@@ -796,10 +804,11 @@ export class IBuff_PeriodAttack_Bullet extends IBuff {
     constructor(teamNum: number) {
         super(teamNum);
 
+        const ctor = this.constructor as typeof IBuff_PeriodAttack_Bullet;
         this.reloadPrevTickNum = GlobalVars.gameTickNum - GlobalVars.gameStateChangedTickNum;
-        this.reloadTicks       = this.constructor['ReloadTicks'];
-        this._bulletCfg        = this.constructor['_BulletCfg'];
-        this._sourceArmament   = this.constructor['_SourceArmament'];
+        this.reloadTicks       = ctor.ReloadTicks;
+        this._bulletCfg        = ctor._BulletCfg;
+        this._sourceArmament   = ctor._SourceArmament;
     }
 
     static InitConfig() {

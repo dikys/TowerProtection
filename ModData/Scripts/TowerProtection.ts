@@ -18,12 +18,16 @@ import { IBuff } from "./Types/IBuff";
 import { spawnString } from "library/game-logic/decoration-spawn";
 
 export class TowerProtection extends HordePluginBase {
+    //@ts-ignore
     hostPlayerTeamNum : number;
 
+    //@ts-ignore
     // таймеры
     timers: Array<number>;
+    //@ts-ignore
     // номер команды для оповещения
     notifiedTeamNumber: number;
+    //@ts-ignore
     // для команд хранит строки с описанием бафов
     teamsStringDecorationObj: Array<any>;
 
@@ -255,6 +259,7 @@ export class TowerProtection extends HordePluginBase {
                 );
                 strDecObj.DrawLayer = DrawLayer.Birds;
                 //strDecObj.Font = FontUtils.DefaultFont;        // Шрифт Северного Ветра (нельзя изменить высоту букв)
+                //@ts-ignore
                 strDecObj.Font = FontUtils.DefaultVectorFont;  // Шрифт, что используется в чате
 
                 this.teamsStringDecorationObj[teamNum] = strDecObj;
@@ -417,7 +422,7 @@ export class TowerProtection extends HordePluginBase {
             var settlementUnits = scenaSettlements.Item.get(settlementNum + '').Units;
 
             settlementUnits.UnitReplaced.connect(
-                function (sender, args) {
+                function (sender, args: any) {
                     // если производится заменя юнита, который в списке юнитов, то нужно переинициализировать его
                     if (!args.OldUnit.ScriptData.ExperienceSystem) {
                         return;
@@ -541,7 +546,7 @@ export class TowerProtection extends HordePluginBase {
         // оповещаем сколько осталось и о игроке
 
         if (gameTickNum % (30 * FPS) == 0 && GlobalVars.GetGameState() != GameState.End) {
-            this.notifiedTeamNumber++;
+            this.notifiedTeamNumber = (this.notifiedTeamNumber + 1) % GlobalVars.teams.length;
             while (!GlobalVars.teams[this.notifiedTeamNumber].inGame  ||
                 GlobalVars.teams[this.notifiedTeamNumber].tower.unit.IsDead) {
                 this.notifiedTeamNumber = (this.notifiedTeamNumber + 1) % GlobalVars.teams.length;

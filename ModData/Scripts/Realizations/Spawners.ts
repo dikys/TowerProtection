@@ -19,7 +19,9 @@ export class RectangleSpawner extends ISpawner {
 
 /** спавн в прямоугольном кольце */
 export class RectangleRingSpawner extends ISpawner {
+    //@ts-ignore
     outRect: Rectangle;
+    //@ts-ignore
     inRect: Rectangle;
 
     private cells: Array<Cell>;
@@ -76,6 +78,7 @@ export class RectangleRingSpawner extends ISpawner {
 
 /** angle задается в диапазоне [0, 2PI] */
 export class RingSpawner extends ISpawner {
+    //@ts-ignore
     center: Cell;
     rMin: number;
     rMax: number;

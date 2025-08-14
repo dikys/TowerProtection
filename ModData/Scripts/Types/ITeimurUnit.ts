@@ -24,7 +24,8 @@ export class ITeimurUnit extends IUnit {
     constructor(unit: any, teamNum: number) {
         super(unit, teamNum);
 
-        this._canAttackBuilding = this.constructor['canAttackBuilding'];
+        const ctor = this.constructor as typeof ITeimurUnit;
+        this._canAttackBuilding = ctor.canAttackBuilding;
         this._isIdleCounter     = 0;
         this._unitPrevCell      = new Cell();
         this.needDeleted        = false;
