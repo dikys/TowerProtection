@@ -26,6 +26,14 @@ export class Player_TOWER_BASE extends IProducerUnit {
 
         this.processingTickModule   = 150;
         this.processingTick         = this.unit.PseudoTickCounter % this.processingTickModule;
+
+        // Определяем максимальную дальность атаки
+        if (this.unit.Cfg.MainArmament) {
+            this._armamentsMaxDistance = this.unit.Cfg.MainArmament.Range;
+        }
+        if (this.unit.Cfg.SecondaryArmament) {
+            this._armamentsMaxDistance = Math.max(this._armamentsMaxDistance, this.unit.Cfg.SecondaryArmament.Range);
+        }
     }
 
     public static InitConfig() {
@@ -72,71 +80,61 @@ export class Player_TOWER_BASE extends IProducerUnit {
     }
 
     public GetTargetUnit(armamentDistance: number): any {
-        // если запросили оружие, которое имеет дальность больше максимальной
-        if (armamentDistance >= this._armamentsMaxDistance) {
-
-            this._armamentsTargetEndNum.push(this._targetsUnitInfo.length);
-            this._armamentsTargetNextNum.push(this._targetsUnitInfo.length - 1);
-            this._armamentsMaxDistance++;
-            while (armamentDistance >= this._armamentsMaxDistance) {
-                this._armamentsTargetEndNum.push(this._targetsUnitInfo.length);
-                this._armamentsTargetNextNum.push(this._targetsUnitInfo.length - 1);
-                this._armamentsMaxDistance++;
-            }
+        if (armamentDistance >= this._armamentsMaxDistance || this._targetsUnitInfo.length === 0 || this._armamentsTargetEndNum[armamentDistance] === 0) {
+            return null;
         }
 
-        var targetUnit = null;
-        if (this._targetsUnitInfo.length != 0 && this._armamentsTargetEndNum[armamentDistance] > 0) {
-            targetUnit = this._targetsUnitInfo[this._armamentsTargetNextNum[armamentDistance]].unit;
-            this._armamentsTargetNextNum[armamentDistance]--;
-            if (this._armamentsTargetNextNum[armamentDistance] < 0) {
-                this._armamentsTargetNextNum[armamentDistance] = this._armamentsTargetEndNum[armamentDistance] - 1;
-            }
+        const targetIndex = this._armamentsTargetNextNum[armamentDistance];
+        const targetUnit = this._targetsUnitInfo[targetIndex].unit;
+
+        this._armamentsTargetNextNum[armamentDistance]--;
+        if (this._armamentsTargetNextNum[armamentDistance] < 0) {
+            this._armamentsTargetNextNum[armamentDistance] = this._armamentsTargetEndNum[armamentDistance] - 1;
         }
+
         return targetUnit;
     }
 
     public OnEveryTick(gameTickNum: number): void {
-        if (this._armamentsMaxDistance != 0) {
-            this._targetsUnitInfo = [];
+        // модуль нужен, чтобы не каждый тик выполнять дорогостоящие операции
+        if (gameTickNum % this.processingTickModule !== this.processingTick) {
+            return;
+        }
 
-            // ищем ближайшие цели
-            let unitsIter = iterateOverUnitsInBox(this.unit.Cell, this._armamentsMaxDistance);
-            for (let u = unitsIter.next(); !u.done; u = unitsIter.next()) {
-                var _unit = u.value;
+        if (this._armamentsMaxDistance === 0) {
+            return;
+        }
 
-                if (_unit.IsDead || _unit.Id == this.unit.Id || Number.parseInt(_unit.Owner.Uid) == GlobalVars.teams[this.teamNum].settlementIdx) {
-                    continue;
-                }
+        // Ищем ближайшие цели
+        this._targetsUnitInfo = [];
+        const unitsIter = iterateOverUnitsInBox(this.unit.Cell, this._armamentsMaxDistance);
+        for (let u = unitsIter.next(); !u.done; u = unitsIter.next()) {
+            const _unit = u.value;
 
-                // +0.5,+0.5 это чтобы центр башни
-                // итоговое расстояние уменьшаем на 1, чтобы расстояние от края башни считалось
-                this._targetsUnitInfo.push({unit: _unit, distance: ChebyshevDistance(_unit.Cell.X, _unit.Cell.Y, this.unit.Cell.X + 0.5, this.unit.Cell.Y + 0.5) - 1});
+            if (_unit.IsDead || _unit.Id === this.unit.Id || Number.parseInt(_unit.Owner.Uid) === GlobalVars.teams[this.teamNum].settlementIdx) {
+                continue;
             }
 
-            // сортируем
-            this._targetsUnitInfo.sort((a, b) => {
-                return a.distance - b.distance;
-            });
+            // +0.5, +0.5 это чтобы центр башни
+            // итоговое расстояние уменьшаем на 1, чтобы расстояние от края башни считалось
+            const distance = ChebyshevDistance(_unit.Cell.X, _unit.Cell.Y, this.unit.Cell.X + 0.5, this.unit.Cell.Y + 0.5) - 1;
+            this._targetsUnitInfo.push({ unit: _unit, distance: distance });
+        }
 
-            // инициализируем массивы по выборам целей для орудий
-            if (this._targetsUnitInfo.length != 0) {
-                var armamentDistance = 0;
+        // Сортируем цели по расстоянию
+        this._targetsUnitInfo.sort((a, b) => a.distance - b.distance);
 
-                // перевыделяем массивы текущих целей
-                this._armamentsTargetNextNum = new Array<number>(this._armamentsMaxDistance);
-                this._armamentsTargetEndNum  = new Array<number>(this._armamentsMaxDistance);
+        // Инициализируем массивы для выбора целей
+        this._armamentsTargetEndNum = new Array<number>(this._armamentsMaxDistance).fill(this._targetsUnitInfo.length);
+        this._armamentsTargetNextNum = new Array<number>(this._armamentsMaxDistance).fill(this._targetsUnitInfo.length > 0 ? this._targetsUnitInfo.length - 1 : 0);
 
-                // инициализируем массивы целей
-                for (var targetNum = 0; targetNum < this._targetsUnitInfo.length; targetNum++) {
-                    for (; armamentDistance < this._targetsUnitInfo[targetNum].distance && armamentDistance < this._armamentsMaxDistance; armamentDistance++) {
-                        this._armamentsTargetEndNum[armamentDistance]  = targetNum;
-                        this._armamentsTargetNextNum[armamentDistance] = targetNum - 1;
-                    }
-                }
-                for (; armamentDistance < this._armamentsMaxDistance; armamentDistance++) {
-                    this._armamentsTargetEndNum[armamentDistance]  = this._targetsUnitInfo.length;
-                    this._armamentsTargetNextNum[armamentDistance] = this._targetsUnitInfo.length - 1;
+        if (this._targetsUnitInfo.length > 0) {
+            let armamentDistance = 0;
+            for (let targetNum = 0; targetNum < this._targetsUnitInfo.length; targetNum++) {
+                const targetDistance = this._targetsUnitInfo[targetNum].distance;
+                for (; armamentDistance < targetDistance && armamentDistance < this._armamentsMaxDistance; armamentDistance++) {
+                    this._armamentsTargetEndNum[armamentDistance] = targetNum;
+                    this._armamentsTargetNextNum[armamentDistance] = targetNum > 0 ? targetNum - 1 : 0;
                 }
             }
         }
