@@ -577,14 +577,16 @@ export class DefenderUnit extends IUnit {
     }
 }
 
-export class IBuff_Defender_Unit extends IBuff {
+export abstract class IBuff_Defender_Unit extends IBuff {
     static CfgUid              :   string = "";
     static BaseCfgUid          :   string = "";
     static DefenderCfgBaseUid  :   string = "";
     static DefenderRespawnTime :   number = 0;
 
-    // для каждой тимы хранит уровень защитника
-    static TeamsDefenderLevel  :   Array<number>;
+    /**
+     * @description для каждого типа защитника (ключ - CfgUid) и для каждой команды (индекс в массиве) хранит уровень защитника
+     */
+    static TeamsDefenderLevel  :   Map<string, Array<number>>;
 
     static Upgrade_HP          :   number = 0;
     static Upgrade_Damage      :   number = 0;
@@ -595,63 +597,64 @@ export class IBuff_Defender_Unit extends IBuff {
     static PatrolRadius        :   number = 4;
     static PatrolMaxRadius     :   number = 10;
 
-    //@ts-ignore
-    defenderDeadTickNum        :   number;
-    //@ts-ignore
-    defenderUnit               :   DefenderUnit | null;
-    //@ts-ignore
-    defenderKillsCounter       :   number;
-    //@ts-ignore
-    defenderCurrLevel          :   number;
+    // --- Instance properties ---
+    /** @description Активные юниты-защитники, управляемые этим баффом. */
+    defenders: DefenderUnit[] = [];
+    
+    /** @description Тик, после которого можно спавнить следующего юнита. Используется для кулдауна. */
+    defenderNextSpawnTick: number = 0;
+
+    /** @description Текущий уровень защитников (для отслеживания апгрейдов). */
+    defenderCurrLevel: number = 0;
+
 
     constructor(teamNum: number) {
         super(teamNum);
 
         const ctor = this.constructor as typeof IBuff_Defender_Unit;
-        const TeamsDefenderLevel = ctor.TeamsDefenderLevel;
+        const defenderLevels = ctor.TeamsDefenderLevel.get(ctor.CfgUid);
 
-        // если CFG инициализирован, тогда прокачиваем его и удаляем бафф
-        if (TeamsDefenderLevel[this.teamNum] != 0) {
-            TeamsDefenderLevel[this.teamNum]++;
+        // Такая ситуация не должна происходить, если InitConfig был вызван корректно для всех дочерних классов
+        if (!defenderLevels) {
+            log.error("IBuff_Defender_Unit: Can't find defender levels for CfgUid = " + ctor.CfgUid);
             this.needDeleted = true;
-        } else {
-            TeamsDefenderLevel[this.teamNum]++;
-            this.defenderUnit           = null;
-            this.defenderDeadTickNum    = GlobalVars.gameTickNum - ctor.DefenderRespawnTime; // Initial respawn is immediate
-            this.defenderKillsCounter   = 0;
-            this.defenderCurrLevel      = 1;
+            return;
+        }
 
-            // var that = this;
-            // поддержка системы уровней
-            // GlobalVars.teams[teamNum].settlement.Units.UnitReplaced.connect(function (sender, args) {
-            //     if (that.defenderUnit != null && args.OldUnit.Id == that.defenderUnit.Id) {
-            //         that.defenderUnit = args.NewUnit;
-
-            //         // запрещаем командывать игроку
-            //         var commandsMind       = that.defenderUnit.CommandsMind;
-            //         var disallowedCommands = ScriptUtils.GetValue(commandsMind, "DisallowedCommands");
-            //         disallowedCommands.Add(UnitCommand.MoveToPoint, 1);
-            //         disallowedCommands.Add(UnitCommand.HoldPosition, 1);
-            //         disallowedCommands.Add(UnitCommand.Attack, 1);
-            //         disallowedCommands.Add(UnitCommand.Capture, 1);
-            //         disallowedCommands.Add(UnitCommand.StepAway, 1);
-            //         disallowedCommands.Add(UnitCommand.Cancel, 1);
-            //     }
-            // });
+        // если бафф уже был куплен, то просто повышаем его уровень и удаляем этот временный бафф
+        if (defenderLevels[this.teamNum] > 0) {
+            defenderLevels[this.teamNum]++;
+            this.needDeleted = true;
+        } 
+        // если бафф покупается впервые, то он остается активным и будет управлять юнитами
+        else {
+            defenderLevels[this.teamNum]++;
+            this.defenders = [];
+            // Разрешаем спавн первого юнита сразу
+            this.defenderNextSpawnTick = GlobalVars.gameTickNum;
+            this.defenderCurrLevel = 1;
         }
     }
 
     static InitConfig() {
         IBuff.InitConfig.call(this);
 
-        this.TeamsDefenderLevel = new Array<number>(GlobalVars.teams.length);
-        for (var teamNum = 0; teamNum < GlobalVars.teams.length; teamNum++) {
-            this.TeamsDefenderLevel[teamNum] = 0;
+        // При первом вызове от любого из наследников, инициализируем статическую карту
+        if (!IBuff_Defender_Unit.TeamsDefenderLevel) {
+            IBuff_Defender_Unit.TeamsDefenderLevel = new Map<string, Array<number>>();
         }
 
-        // имя
+        // Не выполняем остальную логику для абстрактного базового класса
+        if (this === IBuff_Defender_Unit) {
+            return;
+        }
+
+        // Для каждого дочернего класса (типа защитника) создаем свой массив уровней для всех команд
+        const levels = new Array<number>(GlobalVars.teams.length).fill(0);
+        IBuff_Defender_Unit.TeamsDefenderLevel.set(this.CfgUid, levels);
+
+        // Устанавливаем общие параметры конфигурации
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "Name", "Нанять защитника - " + HordeContentApi.GetUnitConfig(this.DefenderCfgBaseUid).Name);
-        // описание
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "Description", "Охраняет башню. Респавн " + this.DefenderRespawnTime / 50
             + " сек. За каждое улучшение получает "
             + this.Upgrade_HP + " хп, "
@@ -664,73 +667,75 @@ export class IBuff_Defender_Unit extends IBuff {
 
     public OnEveryTick(gameTickNum: number) {
         const ctor = this.constructor as typeof IBuff_Defender_Unit;
-        const defenderLevel = ctor.TeamsDefenderLevel[this.teamNum];
+        const defenderLevels = ctor.TeamsDefenderLevel.get(ctor.CfgUid);
+        if (!defenderLevels) { return; }
+        const defenderLevel = defenderLevels[this.teamNum];
 
-        // если защитника прокачали
-        if (this.defenderUnit != null && this.defenderCurrLevel != defenderLevel) {
-            this.defenderCurrLevel    = defenderLevel;
+        // 1. Убираем мертвых защитников из списка
+        this.defenders = this.defenders.filter(def => {
+            if (def.unit.IsDead) {
+                // Помечаем обертку для удаления из глобального обработчика юнитов
+                def.needDeleted = true;
+                return false;
+            }
+            return true;
+        });
 
-            var units                   = GlobalVars.teams[this.teamNum].settlement.Units;
-            var deleteParams            = new DeleteUnitParameters();
-            deleteParams.UnitToDelete   = this.defenderUnit.unit;
-            units.DeleteUnit(deleteParams);
-
-            spawnDecoration(ActiveScena.GetRealScena(), HordeContentApi.GetVisualEffectConfig("#VisualEffectConfig_LittleDust"), this.defenderUnit.unit.Position);
-
-            this.defenderUnit.needDeleted = true;
-            this.defenderDeadTickNum      = gameTickNum - ctor.DefenderRespawnTime;
-            this.defenderKillsCounter     = this.defenderUnit.unit.KillsCounter;
-            this.defenderUnit             = null;
+        // 2. Проверяем необходимость апгрейда
+        if (this.defenderCurrLevel !== defenderLevel) {
+            // Больше не удаляем старых юнитов. Новые будут добавляться в свободные слоты.
+            // Защитники предыдущих уровней останутся, пока не погибнут в бою.
+            this.defenderCurrLevel = defenderLevel;
+            // Разрешаем немедленный спавн юнитов, если открылись новые слоты
+            this.defenderNextSpawnTick = gameTickNum;
         }
 
-        // если защитник умер
-        if (this.defenderUnit == null) {
-            // пришло время для спавна
-            if (this.defenderDeadTickNum + ctor.DefenderRespawnTime <= gameTickNum) {
-                var towerCell       = GlobalVars.teams[this.teamNum].towerCell;
-                var generator       = generateCellInSpiral(towerCell.X, towerCell.Y);
+        // 3. Определяем максимальное количество защитников
+        // Уровни 1-2: 1, Уровни 3-4: 2, Уровни 5-6: 3, и т.д.
+        const maxDefendersCount = Math.floor((defenderLevel - 1) / 2) + 1;
 
-                // создаем конфиг, если нет
-                var defenderCfgUid    = ctor.DefenderCfgBaseUid + "_level_" + defenderLevel;
-                var defenderCfg : any = null;
-                if (!HordeContentApi.HasUnitConfig(defenderCfgUid)) {
-                    defenderCfg = HordeContentApi.CloneConfig(HordeContentApi.GetUnitConfig(ctor.DefenderCfgBaseUid), defenderCfgUid);
+        // 4. Спавним новых защитников, если их меньше максимума и прошел кулдаун
+        if (this.defenders.length < maxDefendersCount && gameTickNum >= this.defenderNextSpawnTick) {
+            // Устанавливаем кулдаун для следующего спавна
+            this.defenderNextSpawnTick = gameTickNum + ctor.DefenderRespawnTime;
 
-                    ScriptUtils.SetValue(defenderCfg, "MaxHealth", Math.floor(defenderLevel * ctor.Upgrade_HP));
-                    ScriptUtils.SetValue(defenderCfg.MainArmament.ShotParams, "Damage", Math.floor(defenderLevel * ctor.Upgrade_Damage));
-                    if (ctor.Upgrade_Shield > 0) {
-                        ScriptUtils.SetValue(defenderCfg, "Shield", Math.floor(defenderLevel * ctor.Upgrade_Shield));
-                    }
-                    if (ctor.Upgrade_ImmuneFire > 0 && ctor.Upgrade_ImmuneFire <= defenderLevel) {
-                        ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.FireResistant));
-                    }
-                    if (ctor.Upgrade_ImmuneMagic > 0 && ctor.Upgrade_ImmuneMagic <= defenderLevel) {
-                        ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.MagicResistant));
-                    }
-                } else {
-                    defenderCfg = HordeContentApi.GetUnitConfig(defenderCfgUid);
+            // --- Логика спавна одного юнита ---
+            // Важно: новый защитник всегда спавнится с характеристиками текущего максимального уровня баффа.
+            var towerCell = GlobalVars.teams[this.teamNum].towerCell;
+            var generator = generateCellInSpiral(towerCell.X, towerCell.Y);
+
+            var defenderCfgUid = ctor.DefenderCfgBaseUid + "_level_" + defenderLevel;
+            var defenderCfg: any = null;
+            if (!HordeContentApi.HasUnitConfig(defenderCfgUid)) {
+                defenderCfg = HordeContentApi.CloneConfig(HordeContentApi.GetUnitConfig(ctor.DefenderCfgBaseUid), defenderCfgUid);
+                
+                // Применяем улучшения в зависимости от уровня
+                ScriptUtils.SetValue(defenderCfg, "MaxHealth", Math.floor(defenderCfg.MaxHealth + defenderLevel * ctor.Upgrade_HP));
+                ScriptUtils.SetValue(defenderCfg.MainArmament.ShotParams, "Damage", Math.floor(defenderCfg.MainArmament.ShotParams.Damage + defenderLevel * ctor.Upgrade_Damage));
+                if (ctor.Upgrade_Shield > 0) {
+                    ScriptUtils.SetValue(defenderCfg, "Shield", Math.floor(defenderCfg.Shield + defenderLevel * ctor.Upgrade_Shield));
                 }
+                if (ctor.Upgrade_ImmuneFire > 0 && ctor.Upgrade_ImmuneFire <= defenderLevel) {
+                    ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.FireResistant));
+                }
+                if (ctor.Upgrade_ImmuneMagic > 0 && ctor.Upgrade_ImmuneMagic <= defenderLevel) {
+                    ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.MagicResistant));
+                }
+            } else {
+                defenderCfg = HordeContentApi.GetUnitConfig(defenderCfgUid);
+            }
 
-                // создаем юнита
-                this.defenderUnit = new DefenderUnit(spawnUnits(GlobalVars.teams[this.teamNum].settlement,
-                    defenderCfg,
-                    1,
-                    UnitDirection.Down,
-                    generator)[0], this.teamNum);
-                // задаем параметры
-                this.defenderUnit.patrolRadius      = ctor.PatrolRadius;
-                this.defenderUnit.patrolMaxRadius   = ctor.PatrolMaxRadius;
-                this.defenderUnit.unit.KillsCounter = this.defenderKillsCounter;
-                // добавляем в обработчик
-                GlobalVars.units.push(this.defenderUnit);
-            }
-        } else {
-            // если юнит умер, то очищаем ссылку и делаем респавн
-            if (this.defenderUnit.unit.IsDead) {
-                this.defenderKillsCounter = this.defenderUnit.unit.KillsCounter;
-                this.defenderUnit         = null;
-                this.defenderDeadTickNum  = gameTickNum;
-            }
+            const newDefender = new DefenderUnit(spawnUnits(GlobalVars.teams[this.teamNum].settlement,
+                defenderCfg,
+                1,
+                UnitDirection.Down,
+                generator)[0], this.teamNum);
+            
+            newDefender.patrolRadius = ctor.PatrolRadius;
+            newDefender.patrolMaxRadius = ctor.PatrolMaxRadius;
+
+            this.defenders.push(newDefender);
+            GlobalVars.units.push(newDefender);
         }
     }
 }
@@ -741,9 +746,9 @@ export class Buff_Defender_Heavyman extends IBuff_Defender_Unit {
     static DefenderCfgBaseUid   :   string = "#UnitConfig_Slavyane_Heavymen";
     static DefenderRespawnTime  :   number = 10*50;
 
-    static Upgrade_HP           :   number = 100;
-    static Upgrade_Damage       :   number = 4;
-    static Upgrade_Shield       :   number = 0.8;
+    static Upgrade_HP           :   number = 10;
+    static Upgrade_Damage       :   number = 1.5;
+    static Upgrade_Shield       :   number = 0.4;
     static Upgrade_ImmuneFire   :   number = 5;
     static Upgrade_ImmuneMagic  :   number = 10;
 
@@ -767,8 +772,8 @@ export class Buff_Defender_Raider extends IBuff_Defender_Unit {
     static DefenderCfgBaseUid   :   string = "#UnitConfig_Slavyane_Raider";
     static DefenderRespawnTime  :   number = 10*50;
 
-    static Upgrade_HP           :   number = 100;
-    static Upgrade_Damage       :   number = 5;
+    static Upgrade_HP           :   number = 15;
+    static Upgrade_Damage       :   number = 2.2;
     static Upgrade_ImmuneFire   :   number = 5;
     static Upgrade_ImmuneMagic  :   number = 10;
 
