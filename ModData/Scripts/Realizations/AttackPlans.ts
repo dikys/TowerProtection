@@ -78,7 +78,7 @@ export class AttackPlan_1 extends IAttackPlan {
                 new WaveUnit(Teimur_Legendary_ARCHER,      1),
                 new WaveUnit(Teimur_Legendary_WORKER,      1),
                 //new WaveUnit(Teimur_Legendary_GREED_HORSE, 1)
-                new WaveUnit(Teimur_Legendary_HORSE,     1)
+                //new WaveUnit(Teimur_Legendary_HORSE,     1)
             ],
             // normal
             [
