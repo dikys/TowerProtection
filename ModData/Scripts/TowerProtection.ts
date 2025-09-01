@@ -30,6 +30,9 @@ export class TowerProtection extends HordePluginBase {
     //@ts-ignore
     // для команд хранит строки с описанием бафов
     teamsStringDecorationObj: Array<any>;
+    //@ts-ignore
+    // для режима выживания
+    survivalStringDecorationObjs: Array<any>;
 
     public constructor() {
         super("Башенная защита");
@@ -312,6 +315,28 @@ export class TowerProtection extends HordePluginBase {
             }
         }
 
+        if (GlobalVars.gameMode == GameMode.Survival) {
+            this.survivalStringDecorationObjs = new Array<any>(GlobalVars.teams.length);
+            for (var teamNum = 0; teamNum < GlobalVars.teams.length; teamNum++) {
+                if (!GlobalVars.teams[teamNum].inGame) {
+                    continue;
+                }
+
+                var strDecObj = spawnString(
+                    ActiveScena,
+                    "Врагов на карте: 0",
+                    createPoint(32 * (GlobalVars.teams[teamNum].towerCell.X), 32 * (GlobalVars.teams[teamNum].towerCell.Y - 5)),
+                    100000000);
+                strDecObj.Height = 20;
+                strDecObj.Color = createHordeColor(255, 255, 100, 0);
+                strDecObj.DrawLayer = DrawLayer.Birds;
+                //@ts-ignore
+                strDecObj.Font = FontUtils.DefaultVectorFont;
+
+                this.survivalStringDecorationObjs[teamNum] = strDecObj;
+            }
+        }
+
         GlobalVars.SetGameState(GameState.ChoiseDifficult);
     }
 
@@ -525,7 +550,32 @@ export class TowerProtection extends HordePluginBase {
             if (gameTickNum % 50 == 5) { // Проверяем раз в секунду
                 let teimurUnitCount = this.GetTeimurUnits();
 
-                if (teimurUnitCount > 300) {
+                let playerCount = 0;
+                for (var i = 0; i < GlobalVars.teams.length; i++) {
+                    if (GlobalVars.teams[i].inGame) {
+                        playerCount++;
+                    }
+                }
+                let maxEnemies = 300 + 20 * playerCount;
+
+                // Update decorator text and color
+                if (this.survivalStringDecorationObjs) {
+                    let percentage = Math.min(1, teimurUnitCount / maxEnemies);
+                    let greenBlue = Math.round(255 * (1 - percentage));
+                    let newColor = createHordeColor(255, 255, greenBlue, greenBlue);
+
+                    for (var teamNum = 0; teamNum < GlobalVars.teams.length; teamNum++) {
+                        if (!GlobalVars.teams[teamNum].inGame) {
+                            continue;
+                        }
+                        if (this.survivalStringDecorationObjs[teamNum]) {
+                            this.survivalStringDecorationObjs[teamNum].Text = "Врагов на карте: " + teimurUnitCount + " / " + maxEnemies;
+                            this.survivalStringDecorationObjs[teamNum].Color = newColor;
+                        }
+                    }
+                }
+
+                if (teimurUnitCount > maxEnemies) {
                     broadcastMessage("Врагов стало слишком много! Поражение!", createHordeColor(255, 255, 0, 0));
                     // Завершаем игру для всех
                     for (var teamNum = 0; teamNum < GlobalVars.teams.length; teamNum++) {
@@ -535,8 +585,6 @@ export class TowerProtection extends HordePluginBase {
                     }
                     GlobalVars.SetGameState(GameState.End);
                     return; // Выходим из функции Run
-                } else if (teimurUnitCount >= 290) {
-                    broadcastMessage("Внимание врагов на карте " + teimurUnitCount, createHordeColor(255, 255, 100, 0));
                 }
             }
         }
