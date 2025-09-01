@@ -23,6 +23,7 @@ export class ITeimurUnit extends IUnit {
 
     /** индекс текущей точки патрулирования для режима выживания */
     patrolPointIndex: number;
+    giveOrderPeriod: number;
 
     constructor(unit: Unit, teamNum: number) {
         super(unit, teamNum);
@@ -33,36 +34,43 @@ export class ITeimurUnit extends IUnit {
         this._unitPrevCell      = new Cell();
         this.needDeleted        = false;
         this.patrolPointIndex   = -1;
+
+        this.giveOrderPeriod = 0;
     }
 
     protected SurvivalLogical (gameTickNum: number) {
         if (this.patrolPointIndex == -1) {
-                let closestPointIndex = -1;
-                let minDistance = -1;
+            let closestPointIndex = -1;
+            let minDistance = -1;
 
-                for (let i = 0; i < GlobalVars.survivalPatrolPoints.length; i++) {
-                    const point = GlobalVars.survivalPatrolPoints[i];
-                    const distance = ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, point.X, point.Y);
+            for (let i = 0; i < GlobalVars.survivalPatrolPoints.length; i++) {
+                const point = GlobalVars.survivalPatrolPoints[i];
+                const distance = ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, point.X, point.Y);
 
-                    if (closestPointIndex == -1 || distance < minDistance) {
-                        minDistance = distance;
-                        closestPointIndex = i;
-                    }
-                }
-
-                if (closestPointIndex != -1) {
-                    this.patrolPointIndex = closestPointIndex;
-                } else {
-                    this.patrolPointIndex = 0;
+                if (closestPointIndex == -1 || distance < minDistance) {
+                    minDistance = distance;
+                    closestPointIndex = i;
                 }
             }
 
-            const nextPatrolPoint = GlobalVars.survivalPatrolPoints[this.patrolPointIndex];
-            if (ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, nextPatrolPoint.X, nextPatrolPoint.Y) <= 5) {
-                this.patrolPointIndex = (this.patrolPointIndex + 1) % GlobalVars.survivalPatrolPoints.length;
+            if (closestPointIndex != -1) {
+                this.patrolPointIndex = closestPointIndex;
+            } else {
+                this.patrolPointIndex = 0;
             }
+        }
+
+        const nextPatrolPoint = GlobalVars.survivalPatrolPoints[this.patrolPointIndex];
+        if (ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, nextPatrolPoint.X, nextPatrolPoint.Y) <= 4) {
+            this.patrolPointIndex = (this.patrolPointIndex + 1) % GlobalVars.survivalPatrolPoints.length;
+        }
+        //if (this.giveOrderPeriod == 0) {
             this.GivePointCommand(nextPatrolPoint, UnitCommand.MoveToPoint, AssignOrderMode.Replace);
-            return;
+            //this.giveOrderPeriod = 1;
+        //} else {
+        //    this.giveOrderPeriod--;
+        //}
+        return;
     }
 
     public OnEveryTick(gameTickNum: number) {

@@ -13,7 +13,7 @@ export class AttackPlan_1 extends IAttackPlan {
         super();
         this.waves = [];
         if (!endTick) {
-            endTick = 50 * (50*60);
+            endTick = 35 * (50*60);
         }
 
         // тут можно оставить 12 всадников, так как всадники появляются примерно каждые 4 волны, 
@@ -135,7 +135,7 @@ export class AttackPlan_1 extends IAttackPlan {
         while (waveTime <= endTick) {
             // каждая 4-ая волна легендарная
 
-            var isLegendaryWave              = (waveNum > 0 && waveNum % 4 == 0) || (waveTime >= 40.0*50*60);
+            var isLegendaryWave              = (waveNum > 0 && waveNum % 4 == 0) || (waveTime >= 30.0*50*60);
 
             // определяем случайную сложность
 

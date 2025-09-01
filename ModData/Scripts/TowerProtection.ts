@@ -95,12 +95,12 @@ export class TowerProtection extends HordePluginBase {
             GlobalVars.gameMode = GameMode.Survival;
 
             var towerCells = [
-                new Cell(40, 32),
-                new Cell(102, 32),
-                new Cell(110, 71),
-                new Cell(102, 110),
-                new Cell(40, 110),
-                new Cell(32, 71),
+                new Cell(35, 27),
+                new Cell(107, 27),
+                new Cell(115, 71),
+                new Cell(107, 115),
+                new Cell(35, 115),
+                new Cell(27, 71),
             ];
             // Определяем точки для нового режима
             var spawnRectangles = [
@@ -113,12 +113,12 @@ export class TowerProtection extends HordePluginBase {
             ];
             // Эти координаты нужно будет подставить реальные
             GlobalVars.survivalPatrolPoints = [
-                createPoint(38, 30),
-                createPoint(105, 30),
-                createPoint(113, 71),
-                createPoint(105, 113),
-                createPoint(38, 113),
-                createPoint(30, 71)
+                createPoint(35, 27),
+                createPoint(107, 27),
+                createPoint(115, 71),
+                createPoint(107, 115),
+                createPoint(35, 115),
+                createPoint(27, 71)
             ];
 
             // Инициализация команд (может понадобиться своя логика для этого режима)
@@ -265,7 +265,7 @@ export class TowerProtection extends HordePluginBase {
         let replaceParams                 = new ReplaceUnitParameters();
         replaceParams.OldUnit             = GlobalVars.teams[this.hostPlayerTeamNum].tower.unit;
         replaceParams.NewUnitConfig       = GlobalVars.configs[Player_TOWER_CHOISE_DIFFICULT.CfgUid];
-        replaceParams.Cell                = null;  // Можно задать клетку, в которой должен появиться новый юнит. Если null, то центр создаваемого юнита совпадет с предыдущим
+        replaceParams.Cell                = createPoint(GlobalVars.teams[this.hostPlayerTeamNum].towerCell.X, GlobalVars.teams[this.hostPlayerTeamNum].towerCell.Y);  // Можно задать клетку, в которой должен появиться новый юнит. Если null, то центр создаваемого юнита совпадет с предыдущим
         replaceParams.PreserveHealthLevel = false; // Нужно ли передать уровень здоровья? (в процентном соотношении)
         replaceParams.PreserveOrders      = false; // Нужно ли передать приказы?
         replaceParams.Silent              = true;  // Отключение вывода в лог возможных ошибок (при регистрации и создании модели)
@@ -347,7 +347,7 @@ export class TowerProtection extends HordePluginBase {
         this.log.info("this.hostPlayerTeamNum = ", this.hostPlayerTeamNum);
         replaceParams.OldUnit = GlobalVars.teams[this.hostPlayerTeamNum].tower.unit;
         replaceParams.NewUnitConfig = GlobalVars.configs[Player_TOWER_CHOISE_ATTACKPLAN.CfgUid];
-        replaceParams.Cell = null;                   // Можно задать клетку, в которой должен появиться новый юнит. Если null, то центр создаваемого юнита совпадет с предыдущим
+        replaceParams.Cell = createPoint(GlobalVars.teams[this.hostPlayerTeamNum].towerCell.X, GlobalVars.teams[this.hostPlayerTeamNum].towerCell.Y);;                   // Можно задать клетку, в которой должен появиться новый юнит. Если null, то центр создаваемого юнита совпадет с предыдущим
         replaceParams.PreserveHealthLevel = false;   // Нужно ли передать уровень здоровья? (в процентном соотношении)
         replaceParams.PreserveOrders = false;        // Нужно ли передать приказы?
         replaceParams.Silent = true;                 // Отключение вывода в лог возможных ошибок (при регистрации и создании модели)
@@ -444,7 +444,7 @@ export class TowerProtection extends HordePluginBase {
             let replaceParams                 = new ReplaceUnitParameters();
             replaceParams.OldUnit             = GlobalVars.teams[teamNum].tower.unit;
             replaceParams.NewUnitConfig       = GlobalVars.configs[PlayerTowersClass[teamNum].CfgUid];
-            replaceParams.Cell                = null;  // Можно задать клетку, в которой должен появиться новый юнит. Если null, то центр создаваемого юнита совпадет с предыдущим
+            replaceParams.Cell                = createPoint(GlobalVars.teams[teamNum].towerCell.X, GlobalVars.teams[teamNum].towerCell.Y);  // Можно задать клетку, в которой должен появиться новый юнит. Если null, то центр создаваемого юнита совпадет с предыдущим
             replaceParams.PreserveHealthLevel = false; // Нужно ли передать уровень здоровья? (в процентном соотношении)
             replaceParams.PreserveOrders      = false; // Нужно ли передать приказы?
             replaceParams.Silent              = true;  // Отключение вывода в лог возможных ошибок (при регистрации и создании модели)
