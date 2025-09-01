@@ -752,7 +752,7 @@ export class Buff_Defender_Heavyman extends IBuff_Defender_Unit {
     static DefenderRespawnTime  :   number = 10*50;
 
     static Upgrade_HP           :   number = 10;
-    static Upgrade_Damage       :   number = 1.5;
+    static Upgrade_Damage       :   number = 1.3;
     static Upgrade_Shield       :   number = 0.4;
     static Upgrade_ImmuneFire   :   number = 5;
     static Upgrade_ImmuneMagic  :   number = 10;
@@ -777,8 +777,8 @@ export class Buff_Defender_Raider extends IBuff_Defender_Unit {
     static DefenderCfgBaseUid   :   string = "#UnitConfig_Slavyane_Raider";
     static DefenderRespawnTime  :   number = 10*50;
 
-    static Upgrade_HP           :   number = 15;
-    static Upgrade_Damage       :   number = 2.2;
+    static Upgrade_HP           :   number = 10;
+    static Upgrade_Damage       :   number = 1.5;
     static Upgrade_ImmuneFire   :   number = 5;
     static Upgrade_ImmuneMagic  :   number = 10;
 
