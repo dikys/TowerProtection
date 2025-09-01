@@ -3,17 +3,17 @@ import { createPoint, createHordeColor, createResourcesAmount } from "library/co
 import { isReplayMode } from "library/game-logic/game-tools";
 import { DrawLayer, FontUtils, UnitDirection, UnitHurtType } from "library/game-logic/horde-types";
 import HordePluginBase from "plugins/base-plugin";
-import { GameState, GlobalVars, PeopleIncomeLevelT, ReplaceUnitParameters } from "./GlobalData";
+import { GameMode, GameState, GlobalVars, PeopleIncomeLevelT, ReplaceUnitParameters } from "./GlobalData";
 import { AttackPlansClass } from "./Realizations/AttackPlans";
 import { Player_TOWER_CHOISE_DIFFICULT, Player_TOWER_CHOISE_ATTACKPLAN, PlayerTowersClass } from "./Realizations/Player_units";
-import { RectangleRingSpawner } from "./Realizations/Spawners";
+import { RectangleRingSpawner, RectangleSpawner } from "./Realizations/Spawners";
 import { TeimurUnitsClass, TeimurLegendaryUnitsClass } from "./Realizations/Teimur_units";
 import { Cell, Rectangle } from "./Types/Geometry";
 import { ITeimurUnit } from "./Types/ITeimurUnit";
 import { IUnit } from "./Types/IUnit";
 import { Team } from "./Types/Team";
 import { spawnUnit } from "./Utils";
-import { Buff_Improvements, Buff_PeriodHealing, Buff_PeriodIncomeGold, BuffsClass } from "./Realizations/Buffs";
+import { Buff_Improvements, Buff_PeriodHealing, Buff_PeriodIncomeGold, GetBuffsClass } from "./Realizations/Buffs";
 import { IBuff } from "./Types/IBuff";
 import { spawnString } from "library/game-logic/decoration-spawn";
 
@@ -91,7 +91,53 @@ export class TowerProtection extends HordePluginBase {
 
         // проверяем, что за карта
         var scenaName = ActiveScena.GetRealScena().ScenaName;
-        if (scenaName == "Башенная защита - стандарт") {
+        if (scenaName == "Башенная защита - колесо") {
+            GlobalVars.gameMode = GameMode.Survival;
+
+            var towerCells = [
+                new Cell(40, 32),
+                new Cell(102, 32),
+                new Cell(110, 71),
+                new Cell(102, 110),
+                new Cell(40, 110),
+                new Cell(32, 71),
+            ];
+            // Определяем точки для нового режима
+            var spawnRectangles = [
+                new Rectangle(32, 0, 8, 8),
+                new Rectangle(104, 0, 8, 8),
+                new Rectangle(136, 68, 8, 8),
+                new Rectangle(104, 136, 8, 8),
+                new Rectangle(32, 136, 8, 8),
+                new Rectangle(0, 68, 8, 8),
+            ];
+            // Эти координаты нужно будет подставить реальные
+            GlobalVars.survivalPatrolPoints = [
+                createPoint(38, 30),
+                createPoint(105, 30),
+                createPoint(113, 71),
+                createPoint(105, 113),
+                createPoint(38, 113),
+                createPoint(30, 71)
+            ];
+
+            // Инициализация команд (может понадобиться своя логика для этого режима)
+            // Пока что оставляем стандартную, но без башен
+            GlobalVars.teams = new Array<Team>(6);
+            for (var i = 0; i < 6; i++) {
+                var teamNum = i;
+                GlobalVars.teams[teamNum]                    = new Team();
+                GlobalVars.teams[teamNum].teimurSettlementIdx = 6;
+                GlobalVars.teams[teamNum].towerCell          = towerCells[teamNum];
+                GlobalVars.teams[teamNum].settlementIdx      = teamNum;
+                GlobalVars.teams[teamNum].spawner            = new RectangleSpawner(
+                    spawnRectangles[teamNum],
+                    teamNum
+                );
+                GlobalVars.teams[teamNum].inGame = false;
+            }
+        } else if (scenaName == "Башенная защита - стандарт") {
+            GlobalVars.gameMode = GameMode.Standard;
             GlobalVars.teams = new Array<Team>(6);
             for (var i = 0; i < 2; i++) {
                 for (var j = 0; j < 3; j++) {
@@ -197,7 +243,7 @@ export class TowerProtection extends HordePluginBase {
                 continue;
             }
 
-            this.log.info("teamNum = ", teamNum, " nickName = ", GlobalVars.teams[teamNum].nickname);
+            this.log.info("teamNum = ", teamNum, " nickName = ", GlobalVars.teams[teamNum].nickname, " towerCell = ", GlobalVars.teams[teamNum].towerCell.X, GlobalVars.teams[teamNum].towerCell.Y);
 
             var towerUnit = GlobalVars.unitsMap.GetUpperUnit(GlobalVars.teams[teamNum].towerCell.X, GlobalVars.teams[teamNum].towerCell.Y);
             if (towerUnit) {
@@ -356,8 +402,9 @@ export class TowerProtection extends HordePluginBase {
             allUnitsClass[i].InitConfig();
         }
 
-        for (var i = 0; i < BuffsClass.length; i++) {
-            BuffsClass[i].InitConfig();
+        const buffs = GetBuffsClass();
+        for (var i = 0; i < buffs.length; i++) {
+            buffs[i].InitConfig();
         }
 
         // инициализируем план атаки
@@ -449,6 +496,18 @@ export class TowerProtection extends HordePluginBase {
         }
     }
 
+    private GetTeimurUnits () : number {
+        let teimurUnitCount = 0;
+        for (const unit of GlobalVars.units) {
+            // Проверяем, что юнит - враг. Можно использовать instanceof
+            // или добавить флаг в ITeimurUnit.
+            if (unit instanceof ITeimurUnit) {
+                if (!unit.unit.IsDead) teimurUnitCount++;
+            }
+        }
+        return teimurUnitCount;
+    }
+
     private Run(gameTickNum: number) {
         // смещаем номер такта, чтобы время считалось относительно начала игры
         gameTickNum -= GlobalVars.gameStateChangedTickNum;
@@ -458,6 +517,29 @@ export class TowerProtection extends HordePluginBase {
         // присуждаем поражение если башня уничтожена
 
         var timerNum = 0;
+
+        // ==================================================
+        //      ЛОГИКА РЕЖИМА ВЫЖИВАНИЯ
+        // ==================================================
+        if (GlobalVars.gameMode == GameMode.Survival) {
+            if (gameTickNum % 50 == 5) { // Проверяем раз в секунду
+                let teimurUnitCount = this.GetTeimurUnits();
+
+                if (teimurUnitCount > 300) {
+                    broadcastMessage("Врагов стало слишком много! Поражение!", createHordeColor(255, 255, 0, 0));
+                    // Завершаем игру для всех
+                    for (var teamNum = 0; teamNum < GlobalVars.teams.length; teamNum++) {
+                        if (GlobalVars.teams[teamNum].inGame) {
+                            GlobalVars.teams[teamNum].settlement.Existence.ForceTotalDefeat();
+                        }
+                    }
+                    GlobalVars.SetGameState(GameState.End);
+                    return; // Выходим из функции Run
+                } else if (teimurUnitCount >= 290) {
+                    broadcastMessage("Внимание врагов на карте " + teimurUnitCount, createHordeColor(255, 255, 100, 0));
+                }
+            }
+        }
 
         // проверяем не конец игры ли
 
@@ -563,6 +645,9 @@ export class TowerProtection extends HordePluginBase {
             secondsLeft        -= minutesLeft * 60;
             secondsLeft         = Math.round(secondsLeft);
             let msgStr : string = "Осталось продержаться " + (minutesLeft > 0 ? minutesLeft + " минут " : "") + secondsLeft + " секунд\n";
+            if (GlobalVars.gameMode == GameMode.Survival) {
+                msgStr += "Врагов на карте: " + this.GetTeimurUnits() + "\n";
+            }
             msgStr             += "Самые мощные баффы игрока " + GlobalVars.teams[this.notifiedTeamNumber].nickname + ":\n";
             for (var i = 0; i < 3; i++) {
                 var buffIdx = sortedBuffsIdx[i];

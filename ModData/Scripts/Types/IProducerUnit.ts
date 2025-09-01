@@ -1,6 +1,6 @@
 import { IUnit } from "./IUnit";
 import { GlobalVars } from "../GlobalData";
-import { UnitState } from "library/game-logic/horde-types";
+import { Unit, UnitState } from "library/game-logic/horde-types";
 import { UnitProducerProfessionParams, UnitProfession } from "library/game-logic/unit-professions";
 import { CfgAddUnitProducer, setUnitStateWorker } from "../Utils";
 
@@ -10,7 +10,7 @@ export class IProducerUnit extends IUnit {
     public static produceCallbacks : Array<CallbackFunctionType>;
     //public static TESTNUM : number = 0;
 
-    constructor (unit: any, teamNum: number) {
+    constructor (unit: Unit, teamNum: number) {
         super(unit, teamNum);
     }
 

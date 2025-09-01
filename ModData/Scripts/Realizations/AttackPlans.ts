@@ -1,9 +1,10 @@
-import { GlobalVars } from "../GlobalData";
+import { GameMode, GlobalVars } from "../GlobalData";
 import { TeimurLegendaryUnitsClass, Teimur_Swordmen, Teimur_Archer, Teimur_Heavymen, Teimur_Archer_2, Teimur_Raider, Teimur_Catapult, Teimur_Balista, Teimur_Mag_2, Teimur_Villur, Teimur_Olga, Teimur_Legendary_SWORDMEN, Teimur_Legendary_HEAVYMAN, Teimur_Legendary_ARCHER, Teimur_Legendary_ARCHER_2, Teimur_Legendary_RAIDER, Teimur_Legendary_WORKER, Teimur_Legendary_HORSE, Teimur_Legendary_DARK_DRAIDER, Teimur_Legendary_FIRE_MAGE, Teimur_Legendary_GREED_HORSE, Teimur_Scorpion } from "./Teimur_units";
 import { IAttackPlan, WaveUnit, Wave } from "../Types/IAttackPlan";
 import { IUnit, RandomElement } from "../Types/IUnit";
 import { ITeimurUnit } from "../Types/ITeimurUnit";
 import { log } from "library/common/logging";
+import { GameMessage } from "library/common/messages";
 
 export class AttackPlan_1 extends IAttackPlan {
     static Description: string = "Кармические волны";
@@ -75,8 +76,7 @@ export class AttackPlan_1 extends IAttackPlan {
         var waveLegendaryUnits = [
             // easy
             [
-                new WaveUnit(Teimur_Legendary_ARCHER,      1),
-                new WaveUnit(Teimur_Legendary_WORKER,      1),
+                new WaveUnit(Teimur_Legendary_ARCHER,      1)
                 //new WaveUnit(Teimur_Legendary_GREED_HORSE, 1)
                 //new WaveUnit(Teimur_Legendary_HORSE,     1)
             ],
@@ -89,11 +89,15 @@ export class AttackPlan_1 extends IAttackPlan {
             // hard
             [
                 new WaveUnit(Teimur_Legendary_SWORDMEN,  1),
-                new WaveUnit(Teimur_Legendary_RAIDER,    1),
+                //new WaveUnit(Teimur_Legendary_RAIDER,    1),
                 //new WaveUnit(Teimur_Legendary_HORSE,     1),
                 new WaveUnit(Teimur_Legendary_FIRE_MAGE, 1)
             ]
         ];
+        if (GlobalVars.gameMode == GameMode.Standard) {
+            waveLegendaryUnits[0].push(new WaveUnit(Teimur_Legendary_WORKER, 1));
+            waveLegendaryUnits[2].push(new WaveUnit(Teimur_Legendary_RAIDER, 1));
+        }
 
         var waveLegendaryUnits_ProbabilityPerDifficult = new Array<number>(waveLegendaryUnits.length);
         var waveLegendaryUnits_ProbabilityPerUnit      = new Array<Array<number>>(waveLegendaryUnits.length);
@@ -140,7 +144,7 @@ export class AttackPlan_1 extends IAttackPlan {
             var randomNumber : number = GlobalVars.rnd.RandomNumber(0, 32766) * 0.00003051850947599719;
             var index        : number = 0;
             var accProb      : number = wave_ProbabilityPerDifficult[0];
-            while (randomNumber > accProb && index < wave_ProbabilityPerDifficult.length) {
+            while (randomNumber > accProb && index < wave_ProbabilityPerDifficult.length - 1) {
                 index++;
                 accProb += wave_ProbabilityPerDifficult[index];
             }
@@ -165,7 +169,7 @@ export class AttackPlan_1 extends IAttackPlan {
             randomNumber = GlobalVars.rnd.RandomNumber(0, 32766) * 0.00003051850947599719;
             index        = 0;
             accProb      = wave_ProbabilityPerUnit[0];
-            while (randomNumber > accProb && index < wave_ProbabilityPerUnit.length) {
+            while (randomNumber > accProb && index < wave_ProbabilityPerUnit.length - 1) {
                 index++;
                 accProb += wave_ProbabilityPerUnit[index];
             }

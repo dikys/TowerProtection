@@ -6,7 +6,7 @@ import { ILegendaryUnit } from "../Types/ILegendaryUnit";
 import { ITeimurUnit } from "../Types/ITeimurUnit";
 import { generateCellInSpiral } from "library/common/position-tools";
 import { spawnDecoration } from "library/game-logic/decoration-spawn";
-import { CFGPrefix, GlobalVars } from "../GlobalData";
+import { CFGPrefix, GameMode, GlobalVars } from "../GlobalData";
 import { IUnit } from "../Types/IUnit";
 import { AssignOrderMode } from "library/mastermind/virtual-input";
 import { log } from "library/common/logging";
@@ -435,16 +435,23 @@ export class Teimur_Legendary_RAIDER extends ILegendaryUnit {
             }
         }
 
-        // если в очереди меньше 2 приказов, то генерируем новые
-        if (this.unit_ordersMind.OrdersCount <= 1) {
-            // генерируем 5 рандомных достижимых точек вокруг цели
-            var generator_  = generateRandomCellInRect(GlobalVars.teams[this.teamNum].towerCell.X - 10, GlobalVars.teams[this.teamNum].towerCell.Y - 10, 20, 20);
-            var ordersCount = 5 - this.unit_ordersMind.OrdersCount;
-            for (var position = generator_.next(), orderNum = 0; !position.done && orderNum < ordersCount; position = generator_.next(), orderNum++) {
-                if (unitCheckPathTo(this.unit, createPoint(position.value.X, position.value.Y))) {
-                    this.unit_ordersMind.AssignSmartOrder(createPoint(position.value.X, position.value.Y), AssignOrderMode.Queue, 100000);
+        switch (GlobalVars.gameMode) {
+            case GameMode.Survival:
+                this.SurvivalLogical(gameTickNum);
+                break;
+            case GameMode.Standard:
+                // если в очереди меньше 2 приказов, то генерируем новые
+                if (this.unit_ordersMind.OrdersCount <= 1) {
+                    // генерируем 5 рандомных достижимых точек вокруг цели
+                    var generator_  = generateRandomCellInRect(GlobalVars.teams[this.teamNum].towerCell.X - 10, GlobalVars.teams[this.teamNum].towerCell.Y - 10, 20, 20);
+                    var ordersCount = 5 - this.unit_ordersMind.OrdersCount;
+                    for (var position = generator_.next(), orderNum = 0; !position.done && orderNum < ordersCount; position = generator_.next(), orderNum++) {
+                        if (unitCheckPathTo(this.unit, createPoint(position.value.X, position.value.Y))) {
+                            this.unit_ordersMind.AssignSmartOrder(createPoint(position.value.X, position.value.Y), AssignOrderMode.Queue, 100000);
+                        }
+                    }
                 }
-            }
+                break;
         }
     }
 }
@@ -760,16 +767,23 @@ export class Teimur_Legendary_HORSE extends ILegendaryUnit {
             }
         }
 
-        // если в очереди меньше 2 приказов, то генерируем новые
-        if (this.unit_ordersMind.OrdersCount <= 1) {
-            // генерируем 5 рандомных достижимых точек вокруг цели
-            var generator_  = generateRandomCellInRect(GlobalVars.teams[this.teamNum].towerCell.X - 10, GlobalVars.teams[this.teamNum].towerCell.Y - 10, 20, 20);
-            var ordersCount = 5 - this.unit_ordersMind.OrdersCount;
-            for (var position = generator_.next(), orderNum = 0; !position.done && orderNum < ordersCount; position = generator_.next(), orderNum++) {
-                if (unitCheckPathTo(this.unit, createPoint(position.value.X, position.value.Y))) {
-                    this.unit_ordersMind.AssignSmartOrder(createPoint(position.value.X, position.value.Y), AssignOrderMode.Queue, 100000);
+        switch (GlobalVars.gameMode) {
+            case GameMode.Survival:
+                this.SurvivalLogical(gameTickNum);
+                break;
+            case GameMode.Standard:
+                // если в очереди меньше 2 приказов, то генерируем новые
+                if (this.unit_ordersMind.OrdersCount <= 1) {
+                    // генерируем 5 рандомных достижимых точек вокруг цели
+                    var generator_  = generateRandomCellInRect(GlobalVars.teams[this.teamNum].towerCell.X - 10, GlobalVars.teams[this.teamNum].towerCell.Y - 10, 20, 20);
+                    var ordersCount = 5 - this.unit_ordersMind.OrdersCount;
+                    for (var position = generator_.next(), orderNum = 0; !position.done && orderNum < ordersCount; position = generator_.next(), orderNum++) {
+                        if (unitCheckPathTo(this.unit, createPoint(position.value.X, position.value.Y))) {
+                            this.unit_ordersMind.AssignSmartOrder(createPoint(position.value.X, position.value.Y), AssignOrderMode.Queue, 100000);
+                        }
+                    }
                 }
-            }
+                break;
         }
     }
 
@@ -1184,16 +1198,23 @@ export class Teimur_Legendary_GREED_HORSE extends ILegendaryUnit {
     }
 
     public OnEveryTick(gameTickNum: number): void {
-        // если в очереди меньше 2 приказов, то генерируем новые
-        if (this.unit_ordersMind.OrdersCount <= 1) {
-            // генерируем 5 рандомных достижимых точек вокруг цели
-            var generator_  = generateRandomCellInRect(GlobalVars.teams[this.teamNum].towerCell.X - 10, GlobalVars.teams[this.teamNum].towerCell.Y - 10, 20, 20);
-            var ordersCount = 5 - this.unit_ordersMind.OrdersCount;
-            for (var position = generator_.next(), orderNum = 0; !position.done && orderNum < ordersCount; position = generator_.next(), orderNum++) {
-                if (unitCheckPathTo(this.unit, createPoint(position.value.X, position.value.Y))) {
-                    this.unit_ordersMind.AssignSmartOrder(createPoint(position.value.X, position.value.Y), AssignOrderMode.Queue, 100000);
+        switch (GlobalVars.gameMode) {
+            case GameMode.Survival:
+                this.SurvivalLogical(gameTickNum);
+                break;
+            case GameMode.Standard:
+                // если в очереди меньше 2 приказов, то генерируем новые
+                if (this.unit_ordersMind.OrdersCount <= 1) {
+                    // генерируем 5 рандомных достижимых точек вокруг цели
+                    var generator_  = generateRandomCellInRect(GlobalVars.teams[this.teamNum].towerCell.X - 10, GlobalVars.teams[this.teamNum].towerCell.Y - 10, 20, 20);
+                    var ordersCount = 5 - this.unit_ordersMind.OrdersCount;
+                    for (var position = generator_.next(), orderNum = 0; !position.done && orderNum < ordersCount; position = generator_.next(), orderNum++) {
+                        if (unitCheckPathTo(this.unit, createPoint(position.value.X, position.value.Y))) {
+                            this.unit_ordersMind.AssignSmartOrder(createPoint(position.value.X, position.value.Y), AssignOrderMode.Queue, 100000);
+                        }
+                    }
                 }
-            }
+                break;
         }
 
         // отсчет

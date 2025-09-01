@@ -1,12 +1,12 @@
 import { createPoint } from "library/common/primitives";
-import { PointCommandArgs, ProduceAtCommandArgs } from "library/game-logic/horde-types";
+import { PointCommandArgs, ProduceAtCommandArgs, Unit } from "library/game-logic/horde-types";
 import { GlobalVars } from "../GlobalData";
 import { CreateUnitConfig } from "../Utils";
 import { Cell } from "./Geometry";
 
 export class IUnit {
     /** ссылка на юнита */
-    unit: any;
+    unit: Unit;
     /** ссылка на отдел приказов юнита */
     unit_ordersMind: any;
     /** номер команды к которому принадлежит юнит */
@@ -22,7 +22,7 @@ export class IUnit {
     static CfgUid      : string = "";
     static BaseCfgUid  : string = "";
 
-    constructor (unit: any, teamNum: number) {
+    constructor (unit: Unit, teamNum: number) {
         this.unit                   = unit;
         this.teamNum                = teamNum;
         this.unit_ordersMind        = this.unit.OrdersMind;

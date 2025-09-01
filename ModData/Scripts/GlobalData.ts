@@ -2,8 +2,10 @@ import { IUnit } from "./Types/IUnit";
 import { Team } from "./Types/Team";
 import { IAttackPlan } from "./Types/IAttackPlan";
 import { IBuff } from "./Types/IBuff";
+import { Point2D } from "library/common/primitives";
 
 export enum GameState { PreInit, Init, ChoiseDifficult, ChoiseWave, Run, End };
+export enum GameMode { Standard, Survival };
 
 export const CFGPrefix : string = "TowerProtection";
 
@@ -41,6 +43,11 @@ export class GlobalVars {
     /** юниты на карте */
     public static unitsMap : any;
     public static plugin : any;
+
+    /** текущий игровой режим */
+    public static gameMode: GameMode;
+    /** точки патрулирования для режима выживания */
+    public static survivalPatrolPoints: Array<Point2D>;
 
     public static GetGameState() : GameState {
         return this._gameState;

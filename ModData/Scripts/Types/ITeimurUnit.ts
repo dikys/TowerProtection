@@ -1,11 +1,11 @@
 import { generateCellInSpiral } from "library/common/position-tools";
 import { createPoint } from "library/common/primitives";
-import { UnitCommand } from "library/game-logic/horde-types";
+import { Unit, UnitCommand } from "library/game-logic/horde-types";
 import { iterateOverUnitsInBox } from "library/game-logic/unit-and-map";
 import { UnitProfession } from "library/game-logic/unit-professions";
 import { AssignOrderMode } from "library/mastermind/virtual-input";
-import { GlobalVars, UnitQueryFlag } from "../GlobalData";
-import { unitCanBePlacedByRealMap } from "../Utils";
+import { GameMode, GlobalVars, UnitQueryFlag } from "../GlobalData";
+import { ChebyshevDistance, unitCanBePlacedByRealMap } from "../Utils";
 import { Cell } from "./Geometry";
 import { IUnit } from "./IUnit";
 
@@ -21,7 +21,10 @@ export class ITeimurUnit extends IUnit {
     protected _isIdleCounter: number;
     protected _unitPrevCell: Cell;
 
-    constructor(unit: any, teamNum: number) {
+    /** индекс текущей точки патрулирования для режима выживания */
+    patrolPointIndex: number;
+
+    constructor(unit: Unit, teamNum: number) {
         super(unit, teamNum);
 
         const ctor = this.constructor as typeof ITeimurUnit;
@@ -29,9 +32,52 @@ export class ITeimurUnit extends IUnit {
         this._isIdleCounter     = 0;
         this._unitPrevCell      = new Cell();
         this.needDeleted        = false;
+        this.patrolPointIndex   = -1;
+    }
+
+    protected SurvivalLogical (gameTickNum: number) {
+        if (this.patrolPointIndex == -1) {
+                let closestPointIndex = -1;
+                let minDistance = -1;
+
+                for (let i = 0; i < GlobalVars.survivalPatrolPoints.length; i++) {
+                    const point = GlobalVars.survivalPatrolPoints[i];
+                    const distance = ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, point.X, point.Y);
+
+                    if (closestPointIndex == -1 || distance < minDistance) {
+                        minDistance = distance;
+                        closestPointIndex = i;
+                    }
+                }
+
+                if (closestPointIndex != -1) {
+                    this.patrolPointIndex = closestPointIndex;
+                } else {
+                    this.patrolPointIndex = 0;
+                }
+            }
+
+            const nextPatrolPoint = GlobalVars.survivalPatrolPoints[this.patrolPointIndex];
+            if (ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, nextPatrolPoint.X, nextPatrolPoint.Y) <= 5) {
+                this.patrolPointIndex = (this.patrolPointIndex + 1) % GlobalVars.survivalPatrolPoints.length;
+            }
+            this.GivePointCommand(nextPatrolPoint, UnitCommand.MoveToPoint, AssignOrderMode.Replace);
+            return;
     }
 
     public OnEveryTick(gameTickNum: number) {
+        // ==================================================
+        //      НОВЫЙ РЕЖИМ: ВЫЖИВАНИЕ (SURVIVAL)
+        // ==================================================
+        if (GlobalVars.gameMode == GameMode.Survival) {
+            this.SurvivalLogical(gameTickNum);
+            return;
+        }
+
+        // ==================================================
+        //      СТАНДАРТНЫЙ РЕЖИМ
+        // ==================================================
+
         // защита от перекрытых заборов
         if (this._isIdleCounter > 10) {
             this._isIdleCounter = 0;

@@ -3,7 +3,7 @@ import { IUnit } from "../Types/IUnit";
 import { CfgAddUnitProducer, ChebyshevDistance, CreateUnitConfig, setUnitStateWorker } from "../Utils";
 import { AttackPlansClass } from "./AttackPlans";
 import { CFGPrefix, GlobalVars, ReplaceUnitParameters } from "../GlobalData";
-import { UnitCommand, UnitState } from "library/game-logic/horde-types";
+import { Unit, UnitCommand, UnitState } from "library/game-logic/horde-types";
 import { iterateOverUnitsInBox } from "library/game-logic/unit-and-map";
 import { IProducerUnit } from "../Types/IProducerUnit";
 
@@ -30,9 +30,6 @@ export class Player_TOWER_BASE extends IProducerUnit {
         // Определяем максимальную дальность атаки
         if (this.unit.Cfg.MainArmament) {
             this._armamentsMaxDistance = this.unit.Cfg.MainArmament.Range;
-        }
-        if (this.unit.Cfg.SecondaryArmament) {
-            this._armamentsMaxDistance = Math.max(this._armamentsMaxDistance, this.unit.Cfg.SecondaryArmament.Range);
         }
     }
 
@@ -193,7 +190,7 @@ export class Player_TOWER_CHOISE_DIFFICULT extends IUnit {
     static CfgUid      : string = "#" + CFGPrefix + "_Tower_CHOISE_DIFFICULT";
     static BaseCfgUid  : string = "#UnitConfig_Slavyane_Tower";
 
-    constructor (unit: any, teamNum: number) {
+    constructor (unit: Unit, teamNum: number) {
         super(unit, teamNum);
     }
 
@@ -267,7 +264,7 @@ export class Player_TOWER_CHOISE_ATTACKPLAN extends IUnit {
     static CfgUid      : string = "#" + CFGPrefix + "_TOWER_CHOISE_ATTACKPLAN";
     static BaseCfgUid  : string = "#UnitConfig_Slavyane_Tower";
 
-    constructor (unit: any, teamNum: number) {
+    constructor (unit: Unit, teamNum: number) {
         super(unit, teamNum);
     }
 

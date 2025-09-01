@@ -1,5 +1,5 @@
-import { PointCommandArgs, UnitArmament, UnitCommand, UnitDirection, UnitFlags, UnitMapLayer } from "library/game-logic/horde-types";
-import { CFGPrefix, DeleteUnitParameters, GlobalVars } from "../GlobalData";
+import { PointCommandArgs, Unit, UnitArmament, UnitCommand, UnitDirection, UnitFlags, UnitMapLayer } from "library/game-logic/horde-types";
+import { CFGPrefix, DeleteUnitParameters, GameMode, GlobalVars } from "../GlobalData";
 import { IBuff } from "../Types/IBuff";
 import { Player_TOWER_BASE, PlayerTowersClass } from "./Player_units";
 import { createHordeColor, createPF, createPoint } from "library/common/primitives";
@@ -14,6 +14,7 @@ import { AssignOrderMode } from "library/mastermind/virtual-input";
 import { spawnDecoration } from "library/game-logic/decoration-spawn";
 import { iterateOverUnitsInBox } from "library/game-logic/unit-and-map";
 import { Rectangle } from "../Types/Geometry";
+import { log } from "library/common/logging";
 
 // export class Buff_Reroll extends IBuff {
 //     static CfgUid         : string = "#" + CFGPrefix + "_Buff_Reroll";
@@ -471,7 +472,7 @@ export class DefenderUnit extends IUnit {
     //@ts-ignore
     patrolMaxRadius    : number;
 
-    constructor (unit: any, teamNum: number) {
+    constructor (unit: Unit, teamNum: number) {
         super(unit, teamNum);
 
         // запрещаем командывать игроку
@@ -674,6 +675,10 @@ export abstract class IBuff_Defender_Unit extends IBuff {
         // 1. Убираем мертвых защитников из списка
         this.defenders = this.defenders.filter(def => {
             if (def.unit.IsDead) {
+                // Если помечаем впервые, то увеличиваем убийства башни
+                if (!def.needDeleted) {
+                    GlobalVars.teams[this.teamNum].tower.unit.KillsCounter += def.unit.KillsCounter;
+                }
                 // Помечаем обертку для удаления из глобального обработчика юнитов
                 def.needDeleted = true;
                 return false;
@@ -1015,28 +1020,7 @@ export class Buff_Improvements extends IBuff {
     static TowersBuffsCount     : Array<Array<number>>;
     static TowersBuffImprRef : Array<Buff_Improvements>;
     static OpBuffNameToBuffIdx : Map<string, number>;
-    static ImprovementsBuffsClass : Array<typeof IBuff> = [
-        //Buff_Reroll,
-        Buff_PeriodIncomeGold,
-        Buff_PeriodHealing,
-        Buff_DigMoat,
-        Buff_AddShield,
-        Buff_AddMaxHP,
-        Buff_PeriodAttack_Swordmen,
-        Buff_PeriodAttack_Arrow,
-        Buff_PeriodAttack_Arrow_2,
-        Buff_PeriodAttack_Catapult,
-        Buff_PeriodAttack_Balista,
-        Buff_PeriodAttack_Ikon,
-        Buff_PeriodAttack_Villur,
-        Buff_HpToGold,
-        Buff_DoublingMaxBuff,
-        Buff_Defender_Heavyman,
-        Buff_Defender_Raider,
-    
-        // важно, чтобы данный бафф был после всех
-        //Buff_SellEnemyBuff
-    ];
+    static ImprovementsBuffsClass : Array<typeof IBuff>;
 
     impPlanCurrNum   : number;
     towerProduceList : any;
@@ -1069,8 +1053,8 @@ export class Buff_Improvements extends IBuff {
                     GlobalVars.teams[this.teamNum].incomeLumber += buffCfg.CostResources.Lumber;
                     GlobalVars.teams[this.teamNum].incomePeople += buffCfg.CostResources.People;
 
-                    let msg = createGameMessageWithNoSound("Достигнут лимит '"
-                        + buffCfg.Name + "' = " + Buff_Improvements.TowersBuffsCount[this.teamNum][buffClassIdx] + ". Потраченное возвращено.",
+                    let msg = createGameMessageWithNoSound("Достигнут лимит '" + 
+                        buffCfg.Name + "' = " + Buff_Improvements.TowersBuffsCount[this.teamNum][buffClassIdx] + ". Потраченное возвращено.",
                         createHordeColor(255, 200, 200, 200));
                     GlobalVars.teams[this.teamNum].settlement.Messages.AddMessage(msg);
                 }
@@ -1082,7 +1066,7 @@ export class Buff_Improvements extends IBuff {
                     GlobalVars.teams[this.teamNum].settlement.Messages.AddMessage(msg);
                 }
 
-                // гененируем план
+                // генерируем план
                 this.towerProduceList.Clear();
                 this.impPlanCurrNum++;
 
@@ -1133,6 +1117,58 @@ export class Buff_Improvements extends IBuff {
             Buff_Improvements.TowersBuffsCount[this.teamNum][buffClassIdx]--;
         }
         return i;
+    }
+
+    public static GetBuffs() : Array<typeof IBuff> {
+        if (GlobalVars.gameMode == GameMode.Standard) {
+            this.ImprovementsBuffsClass = [
+                //Buff_Reroll,
+                Buff_PeriodIncomeGold,
+                Buff_PeriodHealing,
+                Buff_DigMoat,
+                Buff_AddShield,
+                Buff_AddMaxHP,
+                Buff_PeriodAttack_Swordmen,
+                Buff_PeriodAttack_Arrow,
+                Buff_PeriodAttack_Arrow_2,
+                Buff_PeriodAttack_Catapult,
+                Buff_PeriodAttack_Balista,
+                Buff_PeriodAttack_Ikon,
+                Buff_PeriodAttack_Villur,
+                Buff_HpToGold,
+                Buff_DoublingMaxBuff,
+                Buff_Defender_Heavyman,
+                Buff_Defender_Raider,
+            
+                // важно, чтобы данный бафф был после всех
+                //Buff_SellEnemyBuff
+            ];
+        } else {
+            this.ImprovementsBuffsClass = [
+                //Buff_Reroll,
+                Buff_PeriodIncomeGold,
+                Buff_PeriodHealing,
+                //Buff_DigMoat,
+                //Buff_AddShield,
+                Buff_AddMaxHP,
+                Buff_PeriodAttack_Swordmen,
+                Buff_PeriodAttack_Arrow,
+                Buff_PeriodAttack_Arrow_2,
+                Buff_PeriodAttack_Catapult,
+                Buff_PeriodAttack_Balista,
+                Buff_PeriodAttack_Ikon,
+                Buff_PeriodAttack_Villur,
+                //Buff_HpToGold,
+                Buff_DoublingMaxBuff,
+                Buff_Defender_Heavyman,
+                Buff_Defender_Raider,
+            
+                // важно, чтобы данный бафф был после всех
+                //Buff_SellEnemyBuff
+            ];
+        }
+
+        return [...Buff_Improvements.ImprovementsBuffsClass, Buff_Improvements]
     }
 
     static InitConfig() {
@@ -1240,7 +1276,6 @@ export class Buff_Improvements extends IBuff {
     }
 }
 
-export const BuffsClass : Array<typeof IBuff> = [
-    ...Buff_Improvements.ImprovementsBuffsClass,
-    Buff_Improvements
-];
+export function GetBuffsClass() : Array<typeof IBuff> {
+    return Buff_Improvements.GetBuffs();
+}
