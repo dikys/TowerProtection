@@ -38,13 +38,13 @@ export class ITeimurUnit extends IUnit {
         this.giveOrderPeriod = 0;
     }
 
-    protected SurvivalLogical (gameTickNum: number) {
+    protected _Logic_PatrolPath (gameTickNum: number) {
         if (this.patrolPointIndex == -1) {
             let closestPointIndex = -1;
             let minDistance = -1;
 
-            for (let i = 0; i < GlobalVars.survivalPatrolPoints.length; i++) {
-                const point = GlobalVars.survivalPatrolPoints[i];
+            for (let i = 0; i < GlobalVars.keepLimits_patrolPoints.length; i++) {
+                const point = GlobalVars.keepLimits_patrolPoints[i];
                 const distance = ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, point.X, point.Y);
 
                 if (closestPointIndex == -1 || distance < minDistance) {
@@ -60,33 +60,20 @@ export class ITeimurUnit extends IUnit {
             }
         }
 
-        const nextPatrolPoint = GlobalVars.survivalPatrolPoints[this.patrolPointIndex];
+        const nextPatrolPoint = GlobalVars.keepLimits_patrolPoints[this.patrolPointIndex];
         if (ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, nextPatrolPoint.X, nextPatrolPoint.Y) <= 4) {
-            this.patrolPointIndex = (this.patrolPointIndex + 1) % GlobalVars.survivalPatrolPoints.length;
+            this.patrolPointIndex = (this.patrolPointIndex + 1) % GlobalVars.keepLimits_patrolPoints.length;
         }
-        //if (this.giveOrderPeriod == 0) {
+        if (this.giveOrderPeriod == 0) {
             this.GivePointCommand(nextPatrolPoint, UnitCommand.MoveToPoint, AssignOrderMode.Replace);
-            //this.giveOrderPeriod = 1;
-        //} else {
-        //    this.giveOrderPeriod--;
-        //}
+            this.giveOrderPeriod = GlobalVars.keepLimits_patrolPeriod;
+        } else {
+            this.giveOrderPeriod--;
+        }
         return;
     }
 
-    public OnEveryTick(gameTickNum: number) {
-        // ==================================================
-        //      НОВЫЙ РЕЖИМ: ВЫЖИВАНИЕ (SURVIVAL)
-        // ==================================================
-        if (GlobalVars.gameMode == GameMode.Survival) {
-            this.SurvivalLogical(gameTickNum);
-            return;
-        }
-
-        // ==================================================
-        //      СТАНДАРТНЫЙ РЕЖИМ
-        // ==================================================
-
-        // защита от перекрытых заборов
+    protected _Logic_AttackTower(gameTickNum: number) {
         if (this._isIdleCounter > 10) {
             this._isIdleCounter = 0;
 
@@ -137,22 +124,28 @@ export class ITeimurUnit extends IUnit {
         this._isIdleCounter++;
         this._unitPrevCell = new Cell(this.unit.Cell.X, this.unit.Cell.Y);
         
-        // атакуем замок
-        //if (this._canAttackBuilding) {
-        //    this.GivePointCommand(GlobalVars.teams[this.teamNum].castleCell, UnitCommand.Attack, AssignOrderMode.Queue);
-        //} else {
-            // позиция для атаки цели
-            var goalPosition;
-            {
-                var generator = generateCellInSpiral(GlobalVars.teams[this.teamNum].towerCell.X, GlobalVars.teams[this.teamNum].towerCell.Y);
-                for (goalPosition = generator.next(); !goalPosition.done; goalPosition = generator.next()) {
-                    if (unitCanBePlacedByRealMap(this.unit.Cfg, goalPosition.value.X, goalPosition.value.Y)) {
-                        break;
-                    }
+        // позиция для атаки цели
+        var goalPosition;
+        {
+            var generator = generateCellInSpiral(GlobalVars.teams[this.teamNum].towerCell.X, GlobalVars.teams[this.teamNum].towerCell.Y);
+            for (goalPosition = generator.next(); !goalPosition.done; goalPosition = generator.next()) {
+                if (unitCanBePlacedByRealMap(this.unit.Cfg, goalPosition.value.X, goalPosition.value.Y)) {
+                    break;
                 }
             }
-            this.GivePointCommand(goalPosition.value, UnitCommand.Attack, AssignOrderMode.Queue);
-        //}
+        }
+        this.GivePointCommand(goalPosition.value, UnitCommand.Attack, AssignOrderMode.Queue);
+    }
+
+    public OnEveryTick(gameTickNum: number) {
+        switch (GlobalVars.gameMode) {
+            case GameMode.KeepLimits:
+                this._Logic_PatrolPath(gameTickNum);
+                break;
+            case GameMode.Survive:
+                this._Logic_AttackTower(gameTickNum);
+                break;
+        }
     }
 
     public static InitConfig() {

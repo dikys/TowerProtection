@@ -436,10 +436,10 @@ export class Teimur_Legendary_RAIDER extends ILegendaryUnit {
         }
 
         switch (GlobalVars.gameMode) {
-            case GameMode.Survival:
-                this.SurvivalLogical(gameTickNum);
+            case GameMode.KeepLimits:
+                this._Logic_PatrolPath(gameTickNum);
                 break;
-            case GameMode.Standard:
+            case GameMode.Survive:
                 // если в очереди меньше 2 приказов, то генерируем новые
                 if (this.unit_ordersMind.OrdersCount <= 1) {
                     // генерируем 5 рандомных достижимых точек вокруг цели
@@ -768,10 +768,10 @@ export class Teimur_Legendary_HORSE extends ILegendaryUnit {
         }
 
         switch (GlobalVars.gameMode) {
-            case GameMode.Survival:
-                this.SurvivalLogical(gameTickNum);
+            case GameMode.KeepLimits:
+                this._Logic_PatrolPath(gameTickNum);
                 break;
-            case GameMode.Standard:
+            case GameMode.Survive:
                 // если в очереди меньше 2 приказов, то генерируем новые
                 if (this.unit_ordersMind.OrdersCount <= 1) {
                     // генерируем 5 рандомных достижимых точек вокруг цели
@@ -1199,10 +1199,10 @@ export class Teimur_Legendary_GREED_HORSE extends ILegendaryUnit {
 
     public OnEveryTick(gameTickNum: number): void {
         switch (GlobalVars.gameMode) {
-            case GameMode.Survival:
-                this.SurvivalLogical(gameTickNum);
+            case GameMode.KeepLimits:
+                this._Logic_PatrolPath(gameTickNum);
                 break;
-            case GameMode.Standard:
+            case GameMode.Survive:
                 // если в очереди меньше 2 приказов, то генерируем новые
                 if (this.unit_ordersMind.OrdersCount <= 1) {
                     // генерируем 5 рандомных достижимых точек вокруг цели

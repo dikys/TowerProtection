@@ -95,15 +95,15 @@ export class TowerProtection extends HordePluginBase {
         // проверяем, что за карта
         var scenaName = ActiveScena.GetRealScena().ScenaName;
         if (scenaName == "Башенная защита - колесо") {
-            GlobalVars.gameMode = GameMode.Survival;
+            GlobalVars.gameMode = GameMode.KeepLimits;
 
             var towerCells = [
-                new Cell(35, 27),
-                new Cell(107, 27),
-                new Cell(115, 71),
-                new Cell(107, 115),
-                new Cell(35, 115),
-                new Cell(27, 71),
+                new Cell(35, 32),
+                new Cell(107, 32),
+                new Cell(110, 71),
+                new Cell(107, 110),
+                new Cell(35, 110),
+                new Cell(32, 71),
             ];
             // Определяем точки для нового режима
             var spawnRectangles = [
@@ -115,7 +115,7 @@ export class TowerProtection extends HordePluginBase {
                 new Rectangle(0, 68, 8, 8),
             ];
             // Эти координаты нужно будет подставить реальные
-            GlobalVars.survivalPatrolPoints = [
+            GlobalVars.keepLimits_patrolPoints = [
                 createPoint(35, 27),
                 createPoint(107, 27),
                 createPoint(115, 71),
@@ -123,6 +123,7 @@ export class TowerProtection extends HordePluginBase {
                 createPoint(35, 115),
                 createPoint(27, 71)
             ];
+            GlobalVars.keepLimits_patrolPeriod = 0;
 
             // Инициализация команд (может понадобиться своя логика для этого режима)
             // Пока что оставляем стандартную, но без башен
@@ -140,7 +141,7 @@ export class TowerProtection extends HordePluginBase {
                 GlobalVars.teams[teamNum].inGame = false;
             }
         } else if (scenaName == "Башенная защита - стандарт") {
-            GlobalVars.gameMode = GameMode.Standard;
+            GlobalVars.gameMode = GameMode.Survive;
             GlobalVars.teams = new Array<Team>(6);
             for (var i = 0; i < 2; i++) {
                 for (var j = 0; j < 3; j++) {
@@ -315,7 +316,7 @@ export class TowerProtection extends HordePluginBase {
             }
         }
 
-        if (GlobalVars.gameMode == GameMode.Survival) {
+        if (GlobalVars.gameMode == GameMode.KeepLimits) {
             this.survivalStringDecorationObjs = new Array<any>(GlobalVars.teams.length);
             for (var teamNum = 0; teamNum < GlobalVars.teams.length; teamNum++) {
                 if (!GlobalVars.teams[teamNum].inGame) {
@@ -325,7 +326,7 @@ export class TowerProtection extends HordePluginBase {
                 var strDecObj = spawnString(
                     ActiveScena,
                     "Врагов на карте: 0",
-                    createPoint(32 * (GlobalVars.teams[teamNum].towerCell.X), 32 * (GlobalVars.teams[teamNum].towerCell.Y - 5)),
+                    createPoint(32*(GlobalVars.teams[teamNum].towerCell.X - 20), 32*(GlobalVars.teams[teamNum].towerCell.Y - 21)),
                     100000000);
                 strDecObj.Height = 20;
                 strDecObj.Color = createHordeColor(255, 255, 100, 0);
@@ -546,7 +547,7 @@ export class TowerProtection extends HordePluginBase {
         // ==================================================
         //      ЛОГИКА РЕЖИМА ВЫЖИВАНИЯ
         // ==================================================
-        if (GlobalVars.gameMode == GameMode.Survival) {
+        if (GlobalVars.gameMode == GameMode.KeepLimits) {
             if (gameTickNum % 50 == 5) { // Проверяем раз в секунду
                 let teimurUnitCount = this.GetTeimurUnits();
 
@@ -660,14 +661,6 @@ export class TowerProtection extends HordePluginBase {
                 }
             }
             if (allCastlesDead) {
-                // выводим статистику
-                var str = "[PROFILE]\n";
-                for (var i = 0; i < this.timers.length; i++) {
-                    if (this.timers[i] == 0) break;
-                    str += "timer[" + i + "] = " + this.timers[i] + "\n";
-                }
-                this.log.info(str);
-
                 GlobalVars.SetGameState(GameState.End);
             }
         }
@@ -693,7 +686,7 @@ export class TowerProtection extends HordePluginBase {
             secondsLeft        -= minutesLeft * 60;
             secondsLeft         = Math.round(secondsLeft);
             let msgStr : string = "Осталось продержаться " + (minutesLeft > 0 ? minutesLeft + " минут " : "") + secondsLeft + " секунд\n";
-            if (GlobalVars.gameMode == GameMode.Survival) {
+            if (GlobalVars.gameMode == GameMode.KeepLimits) {
                 msgStr += "Врагов на карте: " + this.GetTeimurUnits() + "\n";
             }
             msgStr             += "Самые мощные баффы игрока " + GlobalVars.teams[this.notifiedTeamNumber].nickname + ":\n";
@@ -835,6 +828,13 @@ export class TowerProtection extends HordePluginBase {
                 }
                 ScriptUtils.SetValue(GlobalVars.teams[teamNum].settlement.Existence, "Status", HordeClassLibrary.World.Settlements.Existence.ExistenceStatus.CombatNow);
             }
+            // выводим статистику
+            var str = "[PROFILE]\n";
+            for (var i = 0; i < this.timers.length; i++) {
+                if (this.timers[i] == 0) break;
+                str += "timer[" + i + "] = " + this.timers[i] + "\n";
+            }
+            this.log.info(str);
         }
     }
 }

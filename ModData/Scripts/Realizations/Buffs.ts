@@ -1120,7 +1120,7 @@ export class Buff_Improvements extends IBuff {
     }
 
     public static GetBuffs() : Array<typeof IBuff> {
-        if (GlobalVars.gameMode == GameMode.Standard) {
+        if (GlobalVars.gameMode == GameMode.Survive) {
             this.ImprovementsBuffsClass = [
                 //Buff_Reroll,
                 Buff_PeriodIncomeGold,
@@ -1150,7 +1150,7 @@ export class Buff_Improvements extends IBuff {
                 Buff_PeriodHealing,
                 //Buff_DigMoat,
                 //Buff_AddShield,
-                Buff_AddMaxHP,
+                //Buff_AddMaxHP,
                 Buff_PeriodAttack_Swordmen,
                 Buff_PeriodAttack_Arrow,
                 Buff_PeriodAttack_Arrow_2,

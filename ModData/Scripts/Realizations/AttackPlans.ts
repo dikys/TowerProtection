@@ -94,7 +94,7 @@ export class AttackPlan_1 extends IAttackPlan {
                 new WaveUnit(Teimur_Legendary_FIRE_MAGE, 1)
             ]
         ];
-        if (GlobalVars.gameMode == GameMode.Standard) {
+        if (GlobalVars.gameMode == GameMode.Survive) {
             waveLegendaryUnits[0].push(new WaveUnit(Teimur_Legendary_WORKER, 1));
             waveLegendaryUnits[2].push(new WaveUnit(Teimur_Legendary_RAIDER, 1));
         }

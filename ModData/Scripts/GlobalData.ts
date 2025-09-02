@@ -5,7 +5,7 @@ import { IBuff } from "./Types/IBuff";
 import { Point2D } from "library/common/primitives";
 
 export enum GameState { PreInit, Init, ChoiseDifficult, ChoiseWave, Run, End };
-export enum GameMode { Standard, Survival };
+export enum GameMode { Survive, KeepLimits };
 
 export const CFGPrefix : string = "TowerProtection";
 
@@ -47,7 +47,9 @@ export class GlobalVars {
     /** текущий игровой режим */
     public static gameMode: GameMode;
     /** точки патрулирования для режима выживания */
-    public static survivalPatrolPoints: Array<Point2D>;
+    public static keepLimits_patrolPoints: Array<Point2D>;
+    /** периодичность вызова патрулирования */
+    public static keepLimits_patrolPeriod: number;
 
     public static GetGameState() : GameState {
         return this._gameState;
