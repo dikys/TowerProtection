@@ -5,7 +5,7 @@ import { DrawLayer, FontUtils, UnitDirection, UnitHurtType } from "library/game-
 import HordePluginBase from "plugins/base-plugin";
 import { GameMode, GameState, GlobalVars, PeopleIncomeLevelT, ReplaceUnitParameters } from "./GlobalData";
 import { AttackPlansClass } from "./Realizations/AttackPlans";
-import { Player_TOWER_CHOISE_DIFFICULT, Player_TOWER_CHOISE_ATTACKPLAN, PlayerTowersClass } from "./Realizations/Player_units";
+import { Player_TOWER_BASE, Player_TOWER_CHOISE_DIFFICULT, Player_TOWER_CHOISE_ATTACKPLAN, PlayerTowersClass } from "./Realizations/Player_units";
 import { RectangleRingSpawner, RectangleSpawner } from "./Realizations/Spawners";
 import { TeimurUnitsClass, TeimurLegendaryUnitsClass } from "./Realizations/Teimur_units";
 import { Cell, Rectangle } from "./Types/Geometry";
@@ -16,6 +16,7 @@ import { spawnUnit } from "./Utils";
 import { Buff_Improvements, Buff_PeriodHealing, Buff_PeriodIncomeGold, GetBuffsClass } from "./Realizations/Buffs";
 import { IBuff } from "./Types/IBuff";
 import { spawnString } from "library/game-logic/decoration-spawn";
+import { ILegendaryUnit } from "./Types/ILegendaryUnit";
 
 export class TowerProtection extends HordePluginBase {
     //@ts-ignore
@@ -23,7 +24,7 @@ export class TowerProtection extends HordePluginBase {
 
     //@ts-ignore
     // таймеры
-    timers: Array<number>;
+    timers: Map<string, number>;
     //@ts-ignore
     // номер команды для оповещения
     notifiedTeamNumber: number;
@@ -84,10 +85,7 @@ export class TowerProtection extends HordePluginBase {
         GlobalVars.configs         = new Array<any>();
 
         // профилировка
-        this.timers = new Array<number>(20);
-        for (var i = 0; i < 20; i++) {
-            this.timers[i] = 0;
-        }
+        this.timers = new Map<string, number>();
 
         // переходим к следующему состоянию
         GlobalVars.SetGameState(GameState.Init);
@@ -540,10 +538,6 @@ export class TowerProtection extends HordePluginBase {
 
         var FPS = HordeResurrection.Engine.Logic.Battle.BattleController.GameTimer.CurrentFpsLimit;
 
-        // присуждаем поражение если башня уничтожена
-
-        var timerNum = 0;
-
         // ==================================================
         //      ЛОГИКА РЕЖИМА ВЫЖИВАНИЯ
         // ==================================================
@@ -664,7 +658,7 @@ export class TowerProtection extends HordePluginBase {
                 GlobalVars.SetGameState(GameState.End);
             }
         }
-        this.timers[timerNum++] += new Date().getTime() - time;
+        this.timers.set("Defeat/EndGameChecks", (this.timers.get("Defeat/EndGameChecks") || 0) + new Date().getTime() - time);
 
         // оповещаем сколько осталось и о игроке
 
@@ -738,7 +732,7 @@ export class TowerProtection extends HordePluginBase {
                 GlobalVars.teams[teamNum].spawner.OnEveryTick(gameTickNum);
             }
         }
-        this.timers[timerNum++] += new Date().getTime() - time;
+        this.timers.set("Spawners", (this.timers.get("Spawners") || 0) + new Date().getTime() - time);
 
         // инком
 
@@ -773,29 +767,42 @@ export class TowerProtection extends HordePluginBase {
                 GlobalVars.teams[teamNum].incomePeople = 0;
             }
         }
-        this.timers[timerNum++] += new Date().getTime() - time;
+        this.timers.set("Income", (this.timers.get("Income") || 0) + new Date().getTime() - time);
 
-        // обработка юнитов (65 %)
+        // обработка юнитов (57 %)
 
         time     = new Date().getTime();
         for (var unitNum = 0; unitNum < GlobalVars.units.length; unitNum++) {
+            const unit = GlobalVars.units[unitNum];
             // юнит умер, удаляем из списка
-            if (GlobalVars.units[unitNum].unit.IsDead) {
-                GlobalVars.units[unitNum].OnDead(gameTickNum);
+            if (unit.unit.IsDead) {
+                unit.OnDead(gameTickNum);
                 GlobalVars.units.splice(unitNum--, 1);
             }
             // юнит сам запросил, что его нужно удалить из списка
-            else if (GlobalVars.units[unitNum].needDeleted) {
+            else if (unit.needDeleted) {
                 GlobalVars.units.splice(unitNum--, 1);
             }
             // настало время для обработки юнита
-            else if (gameTickNum % GlobalVars.units[unitNum].processingTickModule == GlobalVars.units[unitNum].processingTick) {
-                GlobalVars.units[unitNum].OnEveryTick(gameTickNum);
+            else if (gameTickNum % unit.processingTickModule == unit.processingTick) {
+                const unitTickTime = new Date().getTime();
+                unit.OnEveryTick(gameTickNum);
+                const tickTime = new Date().getTime() - unitTickTime;
+        
+                if (unit instanceof Player_TOWER_BASE) {
+                    this.timers.set("OnEveryTick_Player_TOWER_BASE", (this.timers.get("OnEveryTick_Player_TOWER_BASE") || 0) + tickTime);
+                } else if (unit instanceof ILegendaryUnit) {
+                    this.timers.set("OnEveryTick_ILegendaryUnit", (this.timers.get("OnEveryTick_ILegendaryUnit") || 0) + tickTime);
+                } else if (unit instanceof ITeimurUnit) {
+                    this.timers.set("OnEveryTick_ITeimurUnit", (this.timers.get("OnEveryTick_ITeimurUnit") || 0) + tickTime);
+                } else {
+                    this.timers.set("OnEveryTick_other", (this.timers.get("OnEveryTick_other") || 0) + tickTime);
+                }
             }
         }
-        this.timers[timerNum++] += new Date().getTime() - time;
+        this.timers.set("Units", (this.timers.get("Units") || 0) + new Date().getTime() - time);
 
-        // обработка баффов (30 %)
+        // обработка баффов (41 %)
 
         time     = new Date().getTime();
         for (var buffNum = 0; buffNum < GlobalVars.buffs.length; buffNum++) {
@@ -809,7 +816,7 @@ export class TowerProtection extends HordePluginBase {
                 GlobalVars.buffs[buffNum].OnEveryTick(gameTickNum);
             }
         }
-        this.timers[timerNum++] += new Date().getTime() - time;
+        this.timers.set("Buffs", (this.timers.get("Buffs") || 0) + new Date().getTime() - time);
 
         // если закончилась игра, то
 
@@ -830,9 +837,11 @@ export class TowerProtection extends HordePluginBase {
             }
             // выводим статистику
             var str = "[PROFILE]\n";
-            for (var i = 0; i < this.timers.length; i++) {
-                if (this.timers[i] == 0) break;
-                str += "timer[" + i + "] = " + this.timers[i] + "\n";
+            for (const [key, value] of Array.from(this.timers.entries())) {
+                if (value == 0) {
+                    continue;
+                }
+                str += key + " = " + value + "\n";
             }
             this.log.info(str);
         }
