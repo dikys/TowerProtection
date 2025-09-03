@@ -774,19 +774,22 @@ export class TowerProtection extends HordePluginBase {
         time     = new Date().getTime();
         for (var unitNum = 0; unitNum < GlobalVars.units.length; unitNum++) {
             const unit = GlobalVars.units[unitNum];
-            // юнит умер, удаляем из списка
-            if (unit.unit.IsDead) {
-                unit.OnDead(gameTickNum);
-                GlobalVars.units.splice(unitNum--, 1);
-            }
-            // юнит сам запросил, что его нужно удалить из списка
-            else if (unit.needDeleted) {
-                GlobalVars.units.splice(unitNum--, 1);
-            }
             // настало время для обработки юнита
-            else if (gameTickNum % unit.processingTickModule == unit.processingTick) {
+            if (gameTickNum % unit.processingTickModule == unit.processingTick) {
                 const unitTickTime = new Date().getTime();
-                unit.OnEveryTick(gameTickNum);
+                // юнит умер, удаляем из списка
+                if (unit.unit.IsDead) {
+                    unit.OnDead(gameTickNum);
+                    GlobalVars.units.splice(unitNum--, 1);
+                }
+                // юнит сам запросил, что его нужно удалить из списка
+                else if (unit.needDeleted) {
+                    GlobalVars.units.splice(unitNum--, 1);
+                }
+                // иначе update
+                else {
+                    unit.OnEveryTick(gameTickNum);
+                }
                 const tickTime = new Date().getTime() - unitTickTime;
         
                 if (unit instanceof Player_TOWER_BASE) {
