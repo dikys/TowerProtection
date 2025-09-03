@@ -26,11 +26,6 @@ export class Player_TOWER_BASE extends IProducerUnit {
 
         this.processingTickModule   = 150;
         this.processingTick         = this.unit.PseudoTickCounter % this.processingTickModule;
-
-        // Определяем максимальную дальность атаки
-        if (this.unit.Cfg.MainArmament) {
-            this._armamentsMaxDistance = this.unit.Cfg.MainArmament.Range;
-        }
     }
 
     public static InitConfig() {
@@ -77,7 +72,24 @@ export class Player_TOWER_BASE extends IProducerUnit {
     }
 
     public GetTargetUnit(armamentDistance: number): any {
-        if (armamentDistance >= this._armamentsMaxDistance || this._targetsUnitInfo.length === 0 || this._armamentsTargetEndNum[armamentDistance] === 0) {
+        // Если запрашиваемая дальность больше известной, динамически расширяем область
+        if (armamentDistance > this._armamentsMaxDistance) {
+            const oldSize = this._armamentsMaxDistance;
+            this._armamentsMaxDistance = armamentDistance;
+    
+            // Расширяем массивы до нового размера.
+            // Новые ячейки будут указывать на то же количество целей, что и последняя известная ячейка,
+            // так как полный список целей (_targetsUnitInfo) еще не обновлен.
+            const lastValidTargetCount = (oldSize > 0 && this._armamentsTargetEndNum.length > oldSize) ? this._armamentsTargetEndNum[oldSize] : 0;
+            const lastValidNextTarget = (oldSize > 0 && this._armamentsTargetNextNum.length > oldSize) ? this._armamentsTargetNextNum[oldSize] : 0;
+    
+            for (let i = oldSize + 1; i <= this._armamentsMaxDistance; i++) {
+                this._armamentsTargetEndNum[i] = lastValidTargetCount;
+                this._armamentsTargetNextNum[i] = lastValidNextTarget;
+            }
+        }
+
+        if (armamentDistance > this._armamentsMaxDistance || this._targetsUnitInfo.length === 0 || this._armamentsTargetEndNum[armamentDistance] === undefined || this._armamentsTargetEndNum[armamentDistance] === 0) {
             return null;
         }
 
@@ -122,14 +134,14 @@ export class Player_TOWER_BASE extends IProducerUnit {
         this._targetsUnitInfo.sort((a, b) => a.distance - b.distance);
 
         // Инициализируем массивы для выбора целей
-        this._armamentsTargetEndNum = new Array<number>(this._armamentsMaxDistance).fill(this._targetsUnitInfo.length);
-        this._armamentsTargetNextNum = new Array<number>(this._armamentsMaxDistance).fill(this._targetsUnitInfo.length > 0 ? this._targetsUnitInfo.length - 1 : 0);
+        this._armamentsTargetEndNum = new Array<number>(this._armamentsMaxDistance + 1).fill(this._targetsUnitInfo.length);
+        this._armamentsTargetNextNum = new Array<number>(this._armamentsMaxDistance + 1).fill(this._targetsUnitInfo.length > 0 ? this._targetsUnitInfo.length - 1 : 0);
 
         if (this._targetsUnitInfo.length > 0) {
             let armamentDistance = 0;
             for (let targetNum = 0; targetNum < this._targetsUnitInfo.length; targetNum++) {
                 const targetDistance = this._targetsUnitInfo[targetNum].distance;
-                for (; armamentDistance < targetDistance && armamentDistance < this._armamentsMaxDistance; armamentDistance++) {
+                for (; armamentDistance <= targetDistance && armamentDistance <= this._armamentsMaxDistance; armamentDistance++) {
                     this._armamentsTargetEndNum[armamentDistance] = targetNum;
                     this._armamentsTargetNextNum[armamentDistance] = targetNum > 0 ? targetNum - 1 : 0;
                 }

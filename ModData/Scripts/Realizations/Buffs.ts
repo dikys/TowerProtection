@@ -466,6 +466,7 @@ export class Buff_HpToGold extends IBuff {
 export class Buff_Adrenaline extends IBuff {
     static CfgUid         :   string = "#" + CFGPrefix + "_Buff_Adrenaline";
     static BaseCfgUid     :   string = "#UnitConfig_Slavyane_Mill";
+    static MaxCount       :   number = 5; 
 
     constructor(teamNum: number) {
         super(teamNum);
@@ -484,6 +485,31 @@ export class Buff_Adrenaline extends IBuff {
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "Description", "Уменьшает перезарядку всех атакующих бафов на 0.25 сек.");
         // стоимость
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid].CostResources, "Gold", 500);
+    }
+};
+
+export class Buff_EagleEye extends IBuff {
+    static CfgUid         :   string = "#" + CFGPrefix + "_Buff_EagleEye";
+    static BaseCfgUid     :   string = "#UnitConfig_Slavyane_Barrack";
+    static MaxCount       :   number = 5; 
+
+    constructor(teamNum: number) {
+        super(teamNum);
+
+        // Эффект баффа пассивный и применяется через другие механики,
+        // поэтому сам бафф после покупки можно сразу удалить.
+        // this.needDeleted = true;
+    }
+
+    static InitConfig() {
+        IBuff.InitConfig.call(this);
+
+        // имя
+        ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "Name", "Орлиный глаз");
+        // описание
+        ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "Description", "Увеличивает дальность атаки всех атакующих бафов на 1 клетку.");
+        // стоимость
+        ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid].CostResources, "Gold", 450);
     }
 };
 
@@ -885,9 +911,19 @@ export class IBuff_PeriodAttack_Bullet extends IBuff {
         }
         this.reloadTicks = currentReloadTicks;
 
+        // === Eagle Eye Logic ===
+        let currentRange = this._sourceArmament.Range;
+        const eagleEyeBuffIdx = Buff_Improvements.OpBuffNameToBuffIdx.get('Buff_EagleEye');
+        if (eagleEyeBuffIdx !== undefined) {
+            const eagleEyeCount = Buff_Improvements.TowersBuffsCount[this.teamNum][eagleEyeBuffIdx];
+            if (eagleEyeCount > 0) {
+                currentRange += eagleEyeCount * 1; // Each buff adds 1 to the range
+            }
+        }
+
         if (this.reloadPrevTickNum + this.reloadTicks <= gameTickNum) {
             var tower      = GlobalVars.teams[this.teamNum].tower as Player_TOWER_BASE;
-            var targetUnit = tower.GetTargetUnit(this._sourceArmament.Range);
+            var targetUnit = tower.GetTargetUnit(currentRange); // Use the calculated range
             if (targetUnit != null) {
                 // отправляемся на перезарядку, только если выстрелили
                 this.reloadPrevTickNum = gameTickNum;
@@ -1165,6 +1201,7 @@ export class Buff_Improvements extends IBuff {
             this.ImprovementsBuffsClass = [
                 //Buff_Reroll,
                 Buff_Adrenaline,
+                Buff_EagleEye,
                 Buff_PeriodIncomeGold,
                 Buff_PeriodHealing,
                 Buff_DigMoat,
@@ -1189,6 +1226,7 @@ export class Buff_Improvements extends IBuff {
             this.ImprovementsBuffsClass = [
                 //Buff_Reroll,
                 Buff_Adrenaline,
+                Buff_EagleEye,
                 Buff_PeriodIncomeGold,
                 Buff_PeriodHealing,
                 //Buff_DigMoat,
