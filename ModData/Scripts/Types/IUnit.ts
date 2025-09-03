@@ -8,7 +8,7 @@ export class IUnit {
     /** ссылка на юнита */
     unit: Unit;
     /** ссылка на отдел приказов юнита */
-    unit_ordersMind: any;
+    unit_ordersMind: HordeClassLibrary.UnitComponents.Minds.OrdersMind;
     /** номер команды к которому принадлежит юнит */
     teamNum: number;
     /** тик на котором нужно обрабатывать юнита */

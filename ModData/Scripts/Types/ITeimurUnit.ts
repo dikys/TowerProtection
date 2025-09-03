@@ -23,7 +23,6 @@ export class ITeimurUnit extends IUnit {
 
     /** индекс текущей точки патрулирования для режима выживания */
     patrolPointIndex: number;
-    giveOrderPeriod: number;
 
     constructor(unit: Unit, teamNum: number) {
         super(unit, teamNum);
@@ -34,11 +33,12 @@ export class ITeimurUnit extends IUnit {
         this._unitPrevCell      = new Cell();
         this.needDeleted        = false;
         this.patrolPointIndex   = -1;
-
-        this.giveOrderPeriod = 0;
     }
 
     protected _Logic_PatrolPath (gameTickNum: number) {
+        let needsNewOrder = false;
+
+        // 1. Initialization: Find the closest patrol point if none is assigned.
         if (this.patrolPointIndex == -1) {
             let closestPointIndex = -1;
             let minDistance = -1;
@@ -52,25 +52,26 @@ export class ITeimurUnit extends IUnit {
                     closestPointIndex = i;
                 }
             }
-
-            if (closestPointIndex != -1) {
-                this.patrolPointIndex = closestPointIndex;
-            } else {
-                this.patrolPointIndex = 0;
-            }
+            
+            this.patrolPointIndex = (closestPointIndex !== -1) ? closestPointIndex : 0;
+            needsNewOrder = true; // Unit just spawned, needs its first order.
         }
 
-        const nextPatrolPoint = GlobalVars.keepLimits_patrolPoints[this.patrolPointIndex];
-        if (ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, nextPatrolPoint.X, nextPatrolPoint.Y) <= 4) {
+        const currentPatrolPoint = GlobalVars.keepLimits_patrolPoints[this.patrolPointIndex];
+
+        // 2. Advancement: Check if the unit has reached the current patrol point.
+        if (ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, currentPatrolPoint.X, currentPatrolPoint.Y) <= 4) {
+            // Advance to the next point and issue a new order.
             this.patrolPointIndex = (this.patrolPointIndex + 1) % GlobalVars.keepLimits_patrolPoints.length;
+            needsNewOrder = true;
         }
-        if (this.giveOrderPeriod == 0) {
+
+        // 3. Give Order: Issue a command only if needed (new unit, new target point, or idle).
+        // The unit_ordersMind.IsIdle() check is crucial.
+        if (needsNewOrder || this.unit_ordersMind.IsIdle() || this.unit_ordersMind.ActiveOrder.IsInstinct) {
+            const nextPatrolPoint = GlobalVars.keepLimits_patrolPoints[this.patrolPointIndex];
             this.GivePointCommand(nextPatrolPoint, UnitCommand.MoveToPoint, AssignOrderMode.Replace);
-            this.giveOrderPeriod = GlobalVars.keepLimits_patrolPeriod;
-        } else {
-            this.giveOrderPeriod--;
         }
-        return;
     }
 
     protected _Logic_AttackTower(gameTickNum: number) {
