@@ -466,7 +466,7 @@ export class Buff_HpToGold extends IBuff {
 export class Buff_Adrenaline extends IBuff {
     static CfgUid         :   string = "#" + CFGPrefix + "_Buff_Adrenaline";
     static BaseCfgUid     :   string = "#UnitConfig_Slavyane_Mill";
-    static MaxCount       :   number = 5; 
+    static MaxCount       :   number = 5;
 
     constructor(teamNum: number) {
         super(teamNum);
@@ -857,6 +857,7 @@ export class IBuff_PeriodAttack_Bullet extends IBuff {
 
     reloadTicks           : number;
     reloadPrevTickNum     : number;
+    shotsRemainder        : number;
 
     private _bulletCfg  : any;
     private _sourceArmament : any;
@@ -867,6 +868,7 @@ export class IBuff_PeriodAttack_Bullet extends IBuff {
         const ctor = this.constructor as typeof IBuff_PeriodAttack_Bullet;
         this.reloadPrevTickNum = GlobalVars.gameTickNum - GlobalVars.gameStateChangedTickNum;
         this.reloadTicks       = ctor.ReloadTicks;
+        this.shotsRemainder    = 0;
         this._bulletCfg        = ctor._BulletCfg;
         this._sourceArmament   = ctor._SourceArmament;
     }
@@ -906,7 +908,7 @@ export class IBuff_PeriodAttack_Bullet extends IBuff {
             if (adrenalineCount > 0) {
                 const reduction = adrenalineCount * 12.5; // 0.25 сек * 50 тиков/сек
                 // Уменьшаем перезарядку, но не меньше минимального значения (5 тиков = 0.1 сек)
-                currentReloadTicks = Math.max(5, ctor.ReloadTicks - reduction);
+                currentReloadTicks = Math.max(25, ctor.ReloadTicks - reduction);
             }
         }
         this.reloadTicks = currentReloadTicks;
@@ -922,21 +924,33 @@ export class IBuff_PeriodAttack_Bullet extends IBuff {
         }
 
         if (this.reloadPrevTickNum + this.reloadTicks <= gameTickNum) {
-            var tower      = GlobalVars.teams[this.teamNum].tower as Player_TOWER_BASE;
-            var targetUnit = tower.GetTargetUnit(currentRange); // Use the calculated range
-            if (targetUnit != null) {
-                // отправляемся на перезарядку, только если выстрелили
-                this.reloadPrevTickNum = gameTickNum;
+            // Сколько выстрелов мы должны были сделать
+            const ticksPassed = gameTickNum - this.reloadPrevTickNum;
+            const shotsToMakeFloat = ticksPassed / this.reloadTicks + this.shotsRemainder;
+            const shotsToMakeInt = Math.floor(shotsToMakeFloat);
 
-                spawnBullet(
-                    tower.unit,
-                    targetUnit,
-                    this._sourceArmament,
-                    this._bulletCfg,
-                    this._sourceArmament.ShotParams,
-                    tower.unit.Position,
-                    targetUnit.Position,
-                    UnitMapLayer.Main);
+            if (shotsToMakeInt > 0) {
+                var tower = GlobalVars.teams[this.teamNum].tower as Player_TOWER_BASE;
+                
+                // отправляемся на перезарядку, только если были попытки выстрелить
+                this.reloadPrevTickNum = gameTickNum;
+                this.shotsRemainder = shotsToMakeFloat - shotsToMakeInt;
+
+                // спавним снаряды
+                for (let i = 0; i < shotsToMakeInt; i++) {
+                    var targetUnit = tower.GetTargetUnit(currentRange); // Get new target for each bullet
+                    if (targetUnit != null) { // Check if a target was found
+                        spawnBullet(
+                            tower.unit,
+                            targetUnit,
+                            this._sourceArmament,
+                            this._bulletCfg,
+                            this._sourceArmament.ShotParams,
+                            tower.unit.Position,
+                            targetUnit.Position,
+                            UnitMapLayer.Main);
+                    }
+                }
             }
         }
     }
