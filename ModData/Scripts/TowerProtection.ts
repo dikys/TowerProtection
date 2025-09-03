@@ -809,14 +809,19 @@ export class TowerProtection extends HordePluginBase {
 
         time     = new Date().getTime();
         for (var buffNum = 0; buffNum < GlobalVars.buffs.length; buffNum++) {
+            const buff = GlobalVars.buffs[buffNum];
             // бафф сам запросил, что его нужно удалить из списка
-            if (GlobalVars.buffs[buffNum].needDeleted) {
-                GlobalVars.buffs[buffNum].OnDead(gameTickNum);
+            if (buff.needDeleted) {
+                buff.OnDead(gameTickNum);
                 GlobalVars.buffs.splice(buffNum--, 1);
             }
             // настало время для обработки бафф
-            else if (gameTickNum % GlobalVars.buffs[buffNum].processingTickModule == GlobalVars.buffs[buffNum].processingTick) {
-                GlobalVars.buffs[buffNum].OnEveryTick(gameTickNum);
+            else if (gameTickNum % buff.processingTickModule == buff.processingTick) {
+                const buffTickTime = new Date().getTime();
+                buff.OnEveryTick(gameTickNum);
+                const tickTime = new Date().getTime() - buffTickTime;
+                const buffName = buff.constructor.name;
+                this.timers.set(`OnEveryTick_${buffName}`, (this.timers.get(`OnEveryTick_${buffName}`) || 0) + tickTime);
             }
         }
         this.timers.set("Buffs", (this.timers.get("Buffs") || 0) + new Date().getTime() - time);
