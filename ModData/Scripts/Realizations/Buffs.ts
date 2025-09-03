@@ -463,6 +463,30 @@ export class Buff_HpToGold extends IBuff {
     }
 };
 
+export class Buff_Adrenaline extends IBuff {
+    static CfgUid         :   string = "#" + CFGPrefix + "_Buff_Adrenaline";
+    static BaseCfgUid     :   string = "#UnitConfig_Slavyane_Mill";
+
+    constructor(teamNum: number) {
+        super(teamNum);
+
+        // Эффект баффа пассивный и применяется через другие механики,
+        // поэтому сам бафф после покупки можно сразу удалить.
+        this.needDeleted = true;
+    }
+
+    static InitConfig() {
+        IBuff.InitConfig.call(this);
+
+        // имя
+        ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "Name", "Адреналин");
+        // описание
+        ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "Description", "Уменьшает перезарядку всех атакующих бафов на 0.25 сек.");
+        // стоимость
+        ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid].CostResources, "Gold", 500);
+    }
+};
+
 export class DefenderUnit extends IUnit {
     static CfgUid      : string = "";
     static BaseCfgUid  : string = "";
@@ -844,6 +868,23 @@ export class IBuff_PeriodAttack_Bullet extends IBuff {
     }
 
     public OnEveryTick(gameTickNum: number) {
+        const ctor = this.constructor as typeof IBuff_PeriodAttack_Bullet;
+        
+        // По умолчанию используем базовую перезарядку
+        let currentReloadTicks = ctor.ReloadTicks;
+
+        // Пересчет перезарядки от Адреналина
+        const adrenalineBuffIdx = Buff_Improvements.OpBuffNameToBuffIdx.get('Buff_Adrenaline');
+        if (adrenalineBuffIdx !== undefined) {
+            const adrenalineCount = Buff_Improvements.TowersBuffsCount[this.teamNum][adrenalineBuffIdx];
+            if (adrenalineCount > 0) {
+                const reduction = adrenalineCount * 12.5; // 0.25 сек * 50 тиков/сек
+                // Уменьшаем перезарядку, но не меньше минимального значения (5 тиков = 0.1 сек)
+                currentReloadTicks = Math.max(5, ctor.ReloadTicks - reduction);
+            }
+        }
+        this.reloadTicks = currentReloadTicks;
+
         if (this.reloadPrevTickNum + this.reloadTicks <= gameTickNum) {
             var tower      = GlobalVars.teams[this.teamNum].tower as Player_TOWER_BASE;
             var targetUnit = tower.GetTargetUnit(this._sourceArmament.Range);
@@ -1123,6 +1164,7 @@ export class Buff_Improvements extends IBuff {
         if (GlobalVars.gameMode == GameMode.Survive) {
             this.ImprovementsBuffsClass = [
                 //Buff_Reroll,
+                Buff_Adrenaline,
                 Buff_PeriodIncomeGold,
                 Buff_PeriodHealing,
                 Buff_DigMoat,
@@ -1146,6 +1188,7 @@ export class Buff_Improvements extends IBuff {
         } else {
             this.ImprovementsBuffsClass = [
                 //Buff_Reroll,
+                Buff_Adrenaline,
                 Buff_PeriodIncomeGold,
                 Buff_PeriodHealing,
                 //Buff_DigMoat,
