@@ -490,7 +490,7 @@ export class Buff_Adrenaline extends IBuff {
 
 export class Buff_EagleEye extends IBuff {
     static CfgUid         :   string = "#" + CFGPrefix + "_Buff_EagleEye";
-    static BaseCfgUid     :   string = "#UnitConfig_Slavyane_Barrack";
+    static BaseCfgUid     :   string = "#UnitConfig_Slavyane_Dove";
     static MaxCount       :   number = 5; 
 
     constructor(teamNum: number) {
@@ -1150,12 +1150,45 @@ export class Buff_Improvements extends IBuff {
                 // динамически генерируем план
                 if (this.impPlanCurrNum == Buff_Improvements.ImprovementPlans.length) {
                     Buff_Improvements.ImprovementPlans.push([]);
-                    var keys    = Array.from(Array(Buff_Improvements.ImprovementsBuffsClass.length).keys());
+                    
+                    // Фильтруем баффы, которые достигли максимального количества у всех игроков
+                    var availableBuffIndices = [];
+                    for (var i = 0; i < Buff_Improvements.ImprovementsBuffsClass.length; i++) {
+                        var buffClass = Buff_Improvements.ImprovementsBuffsClass[i];
+
+                        // Если у баффа нет лимита, он всегда доступен
+                        if (!buffClass.MaxCount || buffClass.MaxCount <= 0) {
+                            availableBuffIndices.push(i);
+                            continue;
+                        }
+
+                        // Проверяем, достиг ли бафф лимита у ВСЕХ активных игроков
+                        var isMaxedOutByAll = true;
+                        for (var teamNum = 0; teamNum < GlobalVars.teams.length; teamNum++) {
+                            if (GlobalVars.teams[teamNum].inGame && !GlobalVars.teams[teamNum].tower.unit.IsDead) {
+                                if (Buff_Improvements.TowersBuffsCount[teamNum][i] < buffClass.MaxCount) {
+                                    isMaxedOutByAll = false;
+                                    break; // Достаточно одного игрока, чтобы бафф был доступен
+                                }
+                            }
+                        }
+
+                        if (!isMaxedOutByAll) {
+                            availableBuffIndices.push(i);
+                        }
+                    }
+
+                    var keys = availableBuffIndices;
+                    var plan = Buff_Improvements.ImprovementPlans[Buff_Improvements.ImprovementPlans.length - 1];
+                    
                     for (var i = 0; i < 3; i++) {
+                        if (keys.length === 0) {
+                            break; // Прерываем, если доступных баффов не осталось
+                        }
                         var index = GlobalVars.rnd.RandomNumber(0, keys.length - 1);
                         var key   = keys[index];
                         keys.splice(index, 1);
-                        Buff_Improvements.ImprovementPlans[Buff_Improvements.ImprovementPlans.length - 1].push(key);
+                        plan.push(key);
                     }
                 }
 
