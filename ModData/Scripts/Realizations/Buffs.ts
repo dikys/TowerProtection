@@ -466,7 +466,7 @@ export class Buff_HpToGold extends IBuff {
 export class Buff_Adrenaline extends IBuff {
     static CfgUid         :   string = "#" + CFGPrefix + "_Buff_Adrenaline";
     static BaseCfgUid     :   string = "#UnitConfig_Slavyane_Mill";
-    static MaxCount       :   number = 5;
+    static MaxCount       :   number = 7;
 
     constructor(teamNum: number) {
         super(teamNum);
