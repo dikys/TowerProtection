@@ -551,7 +551,7 @@ export class TowerProtection extends HordePluginBase {
                         playerCount++;
                     }
                 }
-                let maxEnemies = 300 + 20 * playerCount;
+                let maxEnemies = 300 + 100 * playerCount;
 
                 // Update decorator text and color
                 if (this.survivalStringDecorationObjs) {
@@ -791,16 +791,6 @@ export class TowerProtection extends HordePluginBase {
                     unit.OnEveryTick(gameTickNum);
                 }
                 const tickTime = new Date().getTime() - unitTickTime;
-        
-                if (unit instanceof Player_TOWER_BASE) {
-                    this.timers.set("OnEveryTick_Player_TOWER_BASE", (this.timers.get("OnEveryTick_Player_TOWER_BASE") || 0) + tickTime);
-                } else if (unit instanceof ILegendaryUnit) {
-                    this.timers.set("OnEveryTick_ILegendaryUnit", (this.timers.get("OnEveryTick_ILegendaryUnit") || 0) + tickTime);
-                } else if (unit instanceof ITeimurUnit) {
-                    this.timers.set("OnEveryTick_ITeimurUnit", (this.timers.get("OnEveryTick_ITeimurUnit") || 0) + tickTime);
-                } else {
-                    this.timers.set("OnEveryTick_other", (this.timers.get("OnEveryTick_other") || 0) + tickTime);
-                }
             }
         }
         this.timers.set("Units", (this.timers.get("Units") || 0) + new Date().getTime() - time);
@@ -830,6 +820,18 @@ export class TowerProtection extends HordePluginBase {
 
         if (GlobalVars.GetGameState() == GameState.End) {
             broadcastMessage("Игра начнется через 10 секунд!", createHordeColor(255, 140, 140, 140));
+        }
+
+        if (gameTickNum % 5000 == 0) {
+            // выводим статистику
+            var str = "[PROFILE]\n";
+            for (const [key, value] of Array.from(this.timers.entries())) {
+                if (value == 0) {
+                    continue;
+                }
+                str += key + " = " + value + "\n";
+            }
+            this.log.info(str);
         }
     }
 

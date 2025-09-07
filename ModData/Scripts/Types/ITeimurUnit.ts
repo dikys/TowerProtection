@@ -37,6 +37,7 @@ export class ITeimurUnit extends IUnit {
 
     protected _Logic_PatrolPath (gameTickNum: number) {
         let needsNewOrder = false;
+        let unitCell      = this.unit.Cell;
 
         // 1. Initialization: Find the closest patrol point if none is assigned.
         if (this.patrolPointIndex == -1) {
@@ -45,7 +46,7 @@ export class ITeimurUnit extends IUnit {
 
             for (let i = 0; i < GlobalVars.keepLimits_patrolPoints.length; i++) {
                 const point = GlobalVars.keepLimits_patrolPoints[i];
-                const distance = ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, point.X, point.Y);
+                const distance = ChebyshevDistance(unitCell.X, unitCell.Y, point.X, point.Y);
 
                 if (closestPointIndex == -1 || distance < minDistance) {
                     minDistance = distance;
@@ -60,7 +61,7 @@ export class ITeimurUnit extends IUnit {
         const currentPatrolPoint = GlobalVars.keepLimits_patrolPoints[this.patrolPointIndex];
 
         // 2. Advancement: Check if the unit has reached the current patrol point.
-        if (ChebyshevDistance(this.unit.Cell.X, this.unit.Cell.Y, currentPatrolPoint.X, currentPatrolPoint.Y) <= 4) {
+        if (ChebyshevDistance(unitCell.X, unitCell.Y, currentPatrolPoint.X, currentPatrolPoint.Y) <= 4) {
             // Advance to the next point and issue a new order.
             this.patrolPointIndex = (this.patrolPointIndex + 1) % GlobalVars.keepLimits_patrolPoints.length;
             needsNewOrder = true;
