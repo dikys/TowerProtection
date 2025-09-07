@@ -3,21 +3,24 @@ import { PointCommandArgs, ProduceAtCommandArgs, Unit } from "library/game-logic
 import { GlobalVars } from "../GlobalData";
 import { CreateUnitConfig } from "../Utils";
 import { Cell } from "./Geometry";
+import { ISchedulable } from "../ShedulerSystem";
 
-export class IUnit {
+export class IUnit implements ISchedulable {
     /** ссылка на юнита */
     unit: Unit;
     /** ссылка на отдел приказов юнита */
     unit_ordersMind: HordeClassLibrary.UnitComponents.Minds.OrdersMind;
     /** номер команды к которому принадлежит юнит */
     teamNum: number;
-    /** тик на котором нужно обрабатывать юнита */
-    processingTick: number;
-    /** модуль на который делится игровой тик, если остаток деления равен processingTick, то юнит обрабатывается */
-    processingTickModule: number;
+    
+    /** @description Частота обработки логики юнита в тиках. */
+    public processingRate: number;
 
     /** флаг, что юнита нужно удалить из списка юнитов, чтобы отключить обработку */
     needDeleted: boolean;
+
+    /** @description Флаг, указывающий, что юнит использует новую систему планировщика. */
+    usesScheduler: boolean;
 
     static CfgUid      : string = "";
     static BaseCfgUid  : string = "";
@@ -26,9 +29,13 @@ export class IUnit {
         this.unit                   = unit;
         this.teamNum                = teamNum;
         this.unit_ordersMind        = this.unit.OrdersMind;
-        this.processingTickModule   = 50;
-        this.processingTick         = this.unit.PseudoTickCounter % this.processingTickModule;
         this.needDeleted            = false;
+        this.usesScheduler          = true; // Все юниты теперь по умолчанию используют планировщик
+        this.processingRate         = 50;   // По умолчанию юнит обрабатывается раз в секунду
+
+        // Планируем первую обработку со смещением, чтобы распределить нагрузку
+        const initialOffset = this.unit.PseudoTickCounter % this.processingRate;
+        GlobalVars.scheduler.Schedule(this, GlobalVars.gameTickNum + initialOffset);
     }
 
     public static InitConfig() {
@@ -37,8 +44,27 @@ export class IUnit {
         }
     }
 
-    public OnEveryTick(gameTickNum: number) {}
+    /**
+     * @description Основная логика юнита, вызываемая планировщиком.
+     * Наследники должны переопределять этот метод.
+     * В конце метода необходимо запланировать следующий вызов.
+     */
+    public OnScheduledEvent(gameTickNum: number) {
+        // Базовая реализация планирует следующий вызов.
+        // Наследники должны вызывать super.OnScheduledEvent(gameTickNum) или планировать вызов самостоятельно.
+        if (!this.needDeleted) {
+            GlobalVars.scheduler.Schedule(this, gameTickNum + this.processingRate);
+
+            // обрабатываем смерть
+            if (this.unit.IsDead) {
+                this.needDeleted = true;
+                this.OnDead(gameTickNum);
+            }
+        }
+    }
+
     public OnDead(gameTickNum: number) {}
+    
     /** отдать приказ в точку */
     public GivePointCommand(cell: Cell, command: any, orderMode: any) {
         var pointCommandArgs = new PointCommandArgs(createPoint(cell.X, cell.Y), command, orderMode);

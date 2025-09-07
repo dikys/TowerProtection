@@ -3,6 +3,7 @@ import { Team } from "./Types/Team";
 import { IAttackPlan } from "./Types/IAttackPlan";
 import { IBuff } from "./Types/IBuff";
 import { Point2D } from "library/common/primitives";
+import { Scheduler } from "./ShedulerSystem";
 
 export enum GameState { PreInit, Init, ChoiseDifficult, ChoiseWave, Run, End };
 export enum GameMode { Survive, KeepLimits };
@@ -13,6 +14,8 @@ export const DeleteUnitParameters  = HordeClassLibrary.World.Objects.Units.Delet
 export const ReplaceUnitParameters = HordeClassLibrary.World.Objects.Units.ReplaceUnitParameters;
 export const PeopleIncomeLevelT    = HordeClassLibrary.World.Settlements.Modules.Misc.PeopleIncomeLevel;
 export const UnitQueryFlag         = HordeClassLibrary.UnitComponents.Enumerations.UnitQueryFlag;
+
+// --- Global Variables ---
 
 export class GlobalVars {
     /** текущее игровое состояние */
@@ -43,6 +46,9 @@ export class GlobalVars {
     /** юниты на карте */
     public static unitsMap : any;
     public static plugin : any;
+
+    /** @description Планировщик событий для управления периодическими действиями. */
+    public static scheduler: Scheduler;
 
     /** текущий игровой режим */
     public static gameMode: GameMode;

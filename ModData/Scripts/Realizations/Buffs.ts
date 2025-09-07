@@ -1,5 +1,5 @@
 import { PointCommandArgs, Unit, UnitArmament, UnitCommand, UnitDirection, UnitFlags, UnitMapLayer } from "library/game-logic/horde-types";
-import { CFGPrefix, DeleteUnitParameters, GameMode, GlobalVars } from "../GlobalData";
+import { CFGPrefix, GameMode, GlobalVars } from "../GlobalData";
 import { IBuff } from "../Types/IBuff";
 import { Player_TOWER_BASE, PlayerTowersClass } from "./Player_units";
 import { createHordeColor, createPF, createPoint } from "library/common/primitives";
@@ -11,7 +11,6 @@ import { mergeFlags } from "library/dotnet/dotnet-utils";
 import { ChebyshevDistance, spawnUnits } from "../Utils";
 import { generateCellInSpiral } from "library/common/position-tools";
 import { AssignOrderMode } from "library/mastermind/virtual-input";
-import { spawnDecoration } from "library/game-logic/decoration-spawn";
 import { iterateOverUnitsInBox } from "library/game-logic/unit-and-map";
 import { Rectangle } from "../Types/Geometry";
 import { log } from "library/common/logging";
@@ -268,7 +267,7 @@ export class Buff_DoublingMaxBuff extends IBuff {
             }
         }
 
-        var msg = createGameMessageWithNoSound("Темный отшельник удвоил '"
+        var msg = createGameMessageWithNoSound("Темный отшельник удвоил '" 
             + GlobalVars.configs[Buff_Improvements.ImprovementsBuffsClass[maxBuffIdx].CfgUid].Name + "' " + maxBuffCount + " -> " + (2 * maxBuffCount),
             createHordeColor(255, 140, 140, 140));
         GlobalVars.teams[teamNum].settlement.Messages.AddMessage(msg);
@@ -298,14 +297,13 @@ export class Buff_PeriodIncomeGold extends IBuff {
     static BaseCfgUid     : string = "#UnitConfig_Slavyane_Mine";
     static Period         : number = 250;
     static IncomeGold     : number = 10;
-    activePrevTickNum     : number;
-    remainder             : number;
 
     constructor(teamNum: number) {
         super(teamNum);
+        this.usesScheduler = true;
 
-        this.activePrevTickNum = GlobalVars.gameTickNum - GlobalVars.gameStateChangedTickNum;
-        this.remainder         = 0;
+        // Сразу планируем первое получение золота
+        GlobalVars.scheduler.Schedule(this, GlobalVars.gameTickNum + Buff_PeriodIncomeGold.Period);
     }
 
     static InitConfig() {
@@ -320,14 +318,17 @@ export class Buff_PeriodIncomeGold extends IBuff {
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid].CostResources, "Gold", 300);
     }
 
-    public OnEveryTick(gameTickNum: number) {
-        if (this.activePrevTickNum + Buff_PeriodIncomeGold.Period <= gameTickNum) {
-            var income              = this.remainder + (gameTickNum - this.activePrevTickNum) * Buff_PeriodIncomeGold.IncomeGold / Buff_PeriodIncomeGold.Period;
-            var income_int          = Math.floor(income);
-            this.remainder          = income - income_int;
-            this.activePrevTickNum  = gameTickNum;
-            GlobalVars.teams[this.teamNum].incomeGold += income_int;
+    public OnScheduledEvent(gameTickNum: number) {
+        // Если бафф был удален, ничего не делаем
+        if (this.needDeleted) {
+            return;
         }
+
+        // Добавляем золото
+        GlobalVars.teams[this.teamNum].incomeGold += Buff_PeriodIncomeGold.IncomeGold;
+
+        // Планируем следующее получение золота
+        GlobalVars.scheduler.Schedule(this, gameTickNum + Buff_PeriodIncomeGold.Period);
     }
 };
 
@@ -340,9 +341,10 @@ export class Buff_PeriodHealing extends IBuff {
 
     constructor(teamNum: number) {
         super(teamNum);
+        this.usesScheduler = true;
 
-        this.processingTick       = 0;
-        this.processingTickModule = Buff_PeriodHealing.ActivatePeriod;
+        // Сразу планируем первое лечение
+        GlobalVars.scheduler.Schedule(this, GlobalVars.gameTickNum + Buff_PeriodHealing.ActivatePeriod);
     }
 
     static InitConfig() {
@@ -357,12 +359,23 @@ export class Buff_PeriodHealing extends IBuff {
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid].CostResources, "Gold", 250);
     }
 
-    public OnEveryTick(gameTickNum: number) {
-        const maxHealth = GlobalVars.configs[PlayerTowersClass[this.teamNum].CfgUid].MaxHealth;
-
-        if (GlobalVars.teams[this.teamNum].tower.unit.Health + Buff_PeriodHealing.HealingValue < maxHealth) {
-            GlobalVars.teams[this.teamNum].tower.unit.Health += Buff_PeriodHealing.HealingValue;
+    public OnScheduledEvent(gameTickNum: number) {
+        // Если бафф был удален, ничего не делаем
+        if (this.needDeleted) {
+            return;
         }
+
+        const tower = GlobalVars.teams[this.teamNum].tower;
+        if (tower && !tower.unit.IsDead) {
+            const maxHealth = tower.unit.Cfg.MaxHealth;
+            // Лечим, только если здоровье не полное
+            if (tower.unit.Health < maxHealth) {
+                tower.unit.Health += Buff_PeriodHealing.HealingValue;
+            }
+        }
+
+        // Планируем следующее лечение
+        GlobalVars.scheduler.Schedule(this, gameTickNum + Buff_PeriodHealing.ActivatePeriod);
     }
 };
 
@@ -525,6 +538,9 @@ export class DefenderUnit extends IUnit {
     constructor (unit: Unit, teamNum: number) {
         super(unit, teamNum);
 
+        // Ускоряем обработку AI для защитников
+        this.processingRate = 10; // Каждые 0.2 секунды
+
         // запрещаем командывать игроку
         var commandsMind       = this.unit.CommandsMind;
         var disallowedCommands = ScriptUtils.GetValue(commandsMind, "DisallowedCommands");
@@ -536,7 +552,7 @@ export class DefenderUnit extends IUnit {
         disallowedCommands.Add(UnitCommand.Cancel, 1);
     }
 
-    public OnEveryTick(gameTickNum: number): void {
+    public OnScheduledEvent(gameTickNum: number): void {
         var towerCell         = GlobalVars.teams[this.teamNum].towerCell;
 
         // если отошли далеко, то идем назад
@@ -553,25 +569,7 @@ export class DefenderUnit extends IUnit {
             disallowedCommands.Add(UnitCommand.MoveToPoint, 1);
         }
 
-        // патрулируем вокруг башни
-        // if (this.unit_ordersMind.IsIdle()) {
-        //     var commandsMind       = this.unit.CommandsMind;
-        //     var disallowedCommands = ScriptUtils.GetValue(commandsMind, "DisallowedCommands");
-
-        //     if (disallowedCommands.ContainsKey(UnitCommand.Attack)) disallowedCommands.Remove(UnitCommand.Attack);
-
-        //     var pointCommandArgs1 = new PointCommandArgs(createPoint(towerCell.X - this.patrolRadius,     towerCell.Y - this.patrolRadius),     UnitCommand.Attack, AssignOrderMode.Queue);
-        //     var pointCommandArgs2 = new PointCommandArgs(createPoint(towerCell.X + this.patrolRadius + 1, towerCell.Y - this.patrolRadius),     UnitCommand.Attack, AssignOrderMode.Queue);
-        //     var pointCommandArgs3 = new PointCommandArgs(createPoint(towerCell.X + this.patrolRadius + 1, towerCell.Y + this.patrolRadius + 1), UnitCommand.Attack, AssignOrderMode.Queue);
-        //     var pointCommandArgs4 = new PointCommandArgs(createPoint(towerCell.X - this.patrolRadius,     towerCell.Y + this.patrolRadius + 1), UnitCommand.Attack, AssignOrderMode.Queue);
-        //     this.unit.Cfg.GetOrderDelegate(this.unit, pointCommandArgs1);
-        //     this.unit.Cfg.GetOrderDelegate(this.unit, pointCommandArgs2);
-        //     this.unit.Cfg.GetOrderDelegate(this.unit, pointCommandArgs3);
-        //     this.unit.Cfg.GetOrderDelegate(this.unit, pointCommandArgs4);
-
-        //     disallowedCommands.Add(UnitCommand.Attack, 1);
-        // }
-
+        // Ищем цели или патрулируем, только если юнит ничего не делает
         if (this.unit_ordersMind.IsIdle()) {
             var targetsUnitInfo : any[] = [];
 
@@ -625,6 +623,9 @@ export class DefenderUnit extends IUnit {
                 disallowedCommands.Add(UnitCommand.MoveToPoint, 1);
             }
         }
+
+        // Планируем следующий вызов
+        super.OnScheduledEvent(gameTickNum);
     }
 }
 
@@ -651,9 +652,9 @@ export abstract class IBuff_Defender_Unit extends IBuff {
     // --- Instance properties ---
     /** @description Активные юниты-защитники, управляемые этим баффом. */
     defenders: DefenderUnit[] = [];
-    
-    /** @description Тик, после которого можно спавнить следующего юнита. Используется для кулдауна. */
-    defenderNextSpawnTick: number = 0;
+
+    /** @description Флаг, запланирована ли проверка спавна. */
+    private isSpawnCheckScheduled: boolean = false;
 
     /** @description Текущий уровень защитников (для отслеживания апгрейдов). */
     defenderCurrLevel: number = 0;
@@ -665,46 +666,39 @@ export abstract class IBuff_Defender_Unit extends IBuff {
         const ctor = this.constructor as typeof IBuff_Defender_Unit;
         const defenderLevels = ctor.TeamsDefenderLevel.get(ctor.CfgUid);
 
-        // Такая ситуация не должна происходить, если InitConfig был вызван корректно для всех дочерних классов
         if (!defenderLevels) {
             log.error("IBuff_Defender_Unit: Can't find defender levels for CfgUid = " + ctor.CfgUid);
             this.needDeleted = true;
             return;
         }
 
-        // если бафф уже был куплен, то просто повышаем его уровень и удаляем этот временный бафф
         if (defenderLevels[this.teamNum] > 0) {
             defenderLevels[this.teamNum]++;
             this.needDeleted = true;
         } 
-        // если бафф покупается впервые, то он остается активным и будет управлять юнитами
         else {
             defenderLevels[this.teamNum]++;
             this.defenders = [];
-            // Разрешаем спавн первого юнита сразу
-            this.defenderNextSpawnTick = GlobalVars.gameTickNum;
             this.defenderCurrLevel = 1;
+            // Планируем первую проверку спавна
+            this.ScheduleSpawnCheck(GlobalVars.gameTickNum);
         }
     }
 
     static InitConfig() {
         IBuff.InitConfig.call(this);
 
-        // При первом вызове от любого из наследников, инициализируем статическую карту
         if (!IBuff_Defender_Unit.TeamsDefenderLevel) {
             IBuff_Defender_Unit.TeamsDefenderLevel = new Map<string, Array<number>>();
         }
 
-        // Не выполняем остальную логику для абстрактного базового класса
         if (this === IBuff_Defender_Unit) {
             return;
         }
 
-        // Для каждого дочернего класса (типа защитника) создаем свой массив уровней для всех команд
         const levels = new Array<number>(GlobalVars.teams.length).fill(0);
         IBuff_Defender_Unit.TeamsDefenderLevel.set(this.CfgUid, levels);
 
-        // Устанавливаем общие параметры конфигурации
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "Name", "Нанять защитника - " + HordeContentApi.GetUnitConfig(this.DefenderCfgBaseUid).Name);
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "Description", "Охраняет башню. Респавн " + this.DefenderRespawnTime / 50
             + " сек. За каждое улучшение получает "
@@ -716,6 +710,7 @@ export abstract class IBuff_Defender_Unit extends IBuff {
         );
     }
 
+    // Основной OnEveryTick теперь отвечает только за дешевые операции: очистку и проверку уровня
     public OnEveryTick(gameTickNum: number) {
         const ctor = this.constructor as typeof IBuff_Defender_Unit;
         const defenderLevels = ctor.TeamsDefenderLevel.get(ctor.CfgUid);
@@ -723,75 +718,99 @@ export abstract class IBuff_Defender_Unit extends IBuff {
         const defenderLevel = defenderLevels[this.teamNum];
 
         // 1. Убираем мертвых защитников из списка
+        let defendersCountBefore = this.defenders.length;
         this.defenders = this.defenders.filter(def => {
             if (def.unit.IsDead) {
-                // Если помечаем впервые, то увеличиваем убийства башни
                 if (!def.needDeleted) {
                     GlobalVars.teams[this.teamNum].tower.unit.KillsCounter += def.unit.KillsCounter;
                 }
-                // Помечаем обертку для удаления из глобального обработчика юнитов
                 def.needDeleted = true;
                 return false;
             }
             return true;
         });
 
+        // Если защитник умер, нужно проверить, не освободился ли слот
+        if (this.defenders.length < defendersCountBefore) {
+            this.ScheduleSpawnCheck(gameTickNum);
+        }
+
         // 2. Проверяем необходимость апгрейда
         if (this.defenderCurrLevel !== defenderLevel) {
-            // Больше не удаляем старых юнитов. Новые будут добавляться в свободные слоты.
-            // Защитники предыдущих уровней останутся, пока не погибнут в бою.
             this.defenderCurrLevel = defenderLevel;
-            // Разрешаем немедленный спавн юнитов, если открылись новые слоты
-            this.defenderNextSpawnTick = gameTickNum;
+            // После апгрейда могли появиться новые слоты, проверяем спавн
+            this.ScheduleSpawnCheck(gameTickNum);
+        }
+    }
+
+    // Логика спавна вынесена в планировщик
+    public OnScheduledEvent(gameTickNum: number) {
+        this.isSpawnCheckScheduled = false; // Сбрасываем флаг, т.к. событие выполнено
+
+        if (this.needDeleted) {
+            return;
         }
 
-        // 3. Определяем максимальное количество защитников
-        // Уровни 1-2: 1, Уровни 3-4: 2, Уровни 5-6: 3, и т.д.
+        const ctor = this.constructor as typeof IBuff_Defender_Unit;
+        const defenderLevels = ctor.TeamsDefenderLevel.get(ctor.CfgUid);
+        if (!defenderLevels) { return; }
+        const defenderLevel = defenderLevels[this.teamNum];
+
         const maxDefendersCount = Math.floor((defenderLevel - 1) / 2) + 1;
 
-        // 4. Спавним новых защитников, если их меньше максимума и прошел кулдаун
-        if (this.defenders.length < maxDefendersCount && gameTickNum >= this.defenderNextSpawnTick) {
-            // Устанавливаем кулдаун для следующего спавна
-            this.defenderNextSpawnTick = gameTickNum + ctor.DefenderRespawnTime;
-
-            // --- Логика спавна одного юнита ---
-            // Важно: новый защитник всегда спавнится с характеристиками текущего максимального уровня баффа.
-            var towerCell = GlobalVars.teams[this.teamNum].towerCell;
-            var generator = generateCellInSpiral(towerCell.X, towerCell.Y);
-
-            var defenderCfgUid = ctor.DefenderCfgBaseUid + "_level_" + defenderLevel;
-            var defenderCfg: any = null;
-            if (!HordeContentApi.HasUnitConfig(defenderCfgUid)) {
-                defenderCfg = HordeContentApi.CloneConfig(HordeContentApi.GetUnitConfig(ctor.DefenderCfgBaseUid), defenderCfgUid);
-                
-                // Применяем улучшения в зависимости от уровня
-                ScriptUtils.SetValue(defenderCfg, "MaxHealth", Math.floor(defenderCfg.MaxHealth + defenderLevel * ctor.Upgrade_HP));
-                ScriptUtils.SetValue(defenderCfg.MainArmament.ShotParams, "Damage", Math.floor(defenderCfg.MainArmament.ShotParams.Damage + defenderLevel * ctor.Upgrade_Damage));
-                if (ctor.Upgrade_Shield > 0) {
-                    ScriptUtils.SetValue(defenderCfg, "Shield", Math.floor(defenderCfg.Shield + defenderLevel * ctor.Upgrade_Shield));
-                }
-                if (ctor.Upgrade_ImmuneFire > 0 && ctor.Upgrade_ImmuneFire <= defenderLevel) {
-                    ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.FireResistant));
-                }
-                if (ctor.Upgrade_ImmuneMagic > 0 && ctor.Upgrade_ImmuneMagic <= defenderLevel) {
-                    ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.MagicResistant));
-                }
-            } else {
-                defenderCfg = HordeContentApi.GetUnitConfig(defenderCfgUid);
-            }
-
-            const newDefender = new DefenderUnit(spawnUnits(GlobalVars.teams[this.teamNum].settlement,
-                defenderCfg,
-                1,
-                UnitDirection.Down,
-                generator)[0], this.teamNum);
-            
-            newDefender.patrolRadius = ctor.PatrolRadius;
-            newDefender.patrolMaxRadius = ctor.PatrolMaxRadius;
-
-            this.defenders.push(newDefender);
-            GlobalVars.units.push(newDefender);
+        if (this.defenders.length < maxDefendersCount) {
+            this.SpawnDefender(defenderLevel);
+            // Планируем следующую попытку спавна, если еще есть свободные слоты
+            this.ScheduleSpawnCheck(gameTickNum + ctor.DefenderRespawnTime);
         }
+    }
+
+    /**
+     * @description Планирует проверку спавна, если она еще не запланирована.
+     */
+    private ScheduleSpawnCheck(gameTickNum: number) {
+        if (!this.isSpawnCheckScheduled) {
+            this.isSpawnCheckScheduled = true;
+            GlobalVars.scheduler.Schedule(this, gameTickNum);
+        }
+    }
+
+    private SpawnDefender(defenderLevel: number) {
+        const ctor = this.constructor as typeof IBuff_Defender_Unit;
+        var towerCell = GlobalVars.teams[this.teamNum].towerCell;
+        var generator = generateCellInSpiral(towerCell.X, towerCell.Y);
+
+        var defenderCfgUid = ctor.DefenderCfgBaseUid + "_level_" + defenderLevel;
+        var defenderCfg: any = null;
+        if (!HordeContentApi.HasUnitConfig(defenderCfgUid)) {
+            defenderCfg = HordeContentApi.CloneConfig(HordeContentApi.GetUnitConfig(ctor.DefenderCfgBaseUid), defenderCfgUid);
+            
+            ScriptUtils.SetValue(defenderCfg, "MaxHealth", Math.floor(defenderCfg.MaxHealth + defenderLevel * ctor.Upgrade_HP));
+            ScriptUtils.SetValue(defenderCfg.MainArmament.ShotParams, "Damage", Math.floor(defenderCfg.MainArmament.ShotParams.Damage + defenderLevel * ctor.Upgrade_Damage));
+            if (ctor.Upgrade_Shield > 0) {
+                ScriptUtils.SetValue(defenderCfg, "Shield", Math.floor(defenderCfg.Shield + defenderLevel * ctor.Upgrade_Shield));
+            }
+            if (ctor.Upgrade_ImmuneFire > 0 && ctor.Upgrade_ImmuneFire <= defenderLevel) {
+                ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.FireResistant));
+            }
+            if (ctor.Upgrade_ImmuneMagic > 0 && ctor.Upgrade_ImmuneMagic <= defenderLevel) {
+                ScriptUtils.SetValue(defenderCfg, "Flags", mergeFlags(UnitFlags, defenderCfg.Flags, UnitFlags.MagicResistant));
+            }
+        } else {
+            defenderCfg = HordeContentApi.GetUnitConfig(defenderCfgUid);
+        }
+
+        const newDefender = new DefenderUnit(spawnUnits(GlobalVars.teams[this.teamNum].settlement,
+            defenderCfg,
+            1,
+            UnitDirection.Down,
+            generator)[0], this.teamNum);
+        
+        newDefender.patrolRadius = ctor.PatrolRadius;
+        newDefender.patrolMaxRadius = ctor.PatrolMaxRadius;
+
+        this.defenders.push(newDefender);
+        GlobalVars.units.push(newDefender);
     }
 }
 
@@ -855,22 +874,19 @@ export class IBuff_PeriodAttack_Bullet extends IBuff {
     private static _BulletCfg      :   any;
     private static _SourceArmament :   any;
 
-    reloadTicks           : number;
-    reloadPrevTickNum     : number;
-    shotsRemainder        : number;
-
     private _bulletCfg  : any;
     private _sourceArmament : any;
 
     constructor(teamNum: number) {
         super(teamNum);
+        this.usesScheduler = true;
 
         const ctor = this.constructor as typeof IBuff_PeriodAttack_Bullet;
-        this.reloadPrevTickNum = GlobalVars.gameTickNum - GlobalVars.gameStateChangedTickNum;
-        this.reloadTicks       = ctor.ReloadTicks;
-        this.shotsRemainder    = 0;
         this._bulletCfg        = ctor._BulletCfg;
         this._sourceArmament   = ctor._SourceArmament;
+
+        // Планируем первую атаку
+        GlobalVars.scheduler.Schedule(this, GlobalVars.gameTickNum + ctor.ReloadTicks);
     }
 
     static InitConfig() {
@@ -895,64 +911,53 @@ export class IBuff_PeriodAttack_Bullet extends IBuff {
         ScriptUtils.SetValue(this._SourceArmament, "EmitBulletsCountMax", 1);
     }
 
-    public OnEveryTick(gameTickNum: number) {
-        const ctor = this.constructor as typeof IBuff_PeriodAttack_Bullet;
-        
-        // По умолчанию используем базовую перезарядку
-        let currentReloadTicks = ctor.ReloadTicks;
+    public OnScheduledEvent(gameTickNum: number) {
+        if (this.needDeleted) {
+            return;
+        }
 
-        // Пересчет перезарядки от Адреналина
+        const ctor = this.constructor as typeof IBuff_PeriodAttack_Bullet;
+
+        // Пересчет перезарядки от Адреналина (если он есть)
+        let currentReloadTicks = ctor.ReloadTicks;
         const adrenalineBuffIdx = Buff_Improvements.OpBuffNameToBuffIdx.get('Buff_Adrenaline');
         if (adrenalineBuffIdx !== undefined) {
             const adrenalineCount = Buff_Improvements.TowersBuffsCount[this.teamNum][adrenalineBuffIdx];
             if (adrenalineCount > 0) {
                 const reduction = adrenalineCount * 12.5; // 0.25 сек * 50 тиков/сек
-                // Уменьшаем перезарядку, но не меньше минимального значения (5 тиков = 0.1 сек)
                 currentReloadTicks = Math.max(25, ctor.ReloadTicks - reduction);
             }
         }
-        this.reloadTicks = currentReloadTicks;
 
-        // === Eagle Eye Logic ===
+        // Пересчет дальности от Орлиного глаза
         let currentRange = this._sourceArmament.Range;
         const eagleEyeBuffIdx = Buff_Improvements.OpBuffNameToBuffIdx.get('Buff_EagleEye');
         if (eagleEyeBuffIdx !== undefined) {
             const eagleEyeCount = Buff_Improvements.TowersBuffsCount[this.teamNum][eagleEyeBuffIdx];
             if (eagleEyeCount > 0) {
-                currentRange += eagleEyeCount * 1; // Each buff adds 1 to the range
+                currentRange += eagleEyeCount; // Каждый уровень баффа +1 к дальности
             }
         }
 
-        if (this.reloadPrevTickNum + this.reloadTicks <= gameTickNum) {
-            // Сколько выстрелов мы должны были сделать
-            const ticksPassed = gameTickNum - this.reloadPrevTickNum;
-            const shotsToMakeFloat = ticksPassed / this.reloadTicks + this.shotsRemainder;
-            const shotsToMakeInt = Math.floor(shotsToMakeFloat);
-
-            if (shotsToMakeInt > 0) {
-                var tower = GlobalVars.teams[this.teamNum].tower as Player_TOWER_BASE;
-                
-                // отправляемся на перезарядку, только если были попытки выстрелить
-                this.reloadPrevTickNum = gameTickNum;
-                this.shotsRemainder = shotsToMakeFloat - shotsToMakeInt;
-
-                // спавним снаряды
-                for (let i = 0; i < shotsToMakeInt; i++) {
-                    var targetUnit = tower.GetTargetUnit(currentRange); // Get new target for each bullet
-                    if (targetUnit != null) { // Check if a target was found
-                        spawnBullet(
-                            tower.unit,
-                            targetUnit,
-                            this._sourceArmament,
-                            this._bulletCfg,
-                            this._sourceArmament.ShotParams,
-                            tower.unit.Position,
-                            targetUnit.Position,
-                            UnitMapLayer.Main);
-                    }
-                }
+        // Атака
+        var tower = GlobalVars.teams[this.teamNum].tower as Player_TOWER_BASE;
+        if (tower && !tower.unit.IsDead) {
+            var targetUnit = tower.GetTargetUnit(currentRange);
+            if (targetUnit != null) {
+                spawnBullet(
+                    tower.unit,
+                    targetUnit,
+                    this._sourceArmament,
+                    this._bulletCfg,
+                    this._sourceArmament.ShotParams,
+                    tower.unit.Position,
+                    targetUnit.Position,
+                    UnitMapLayer.Main);
             }
         }
+
+        // Планируем следующую атаку
+        GlobalVars.scheduler.Schedule(this, gameTickNum + currentReloadTicks);
     }
 }
 
@@ -1247,7 +1252,7 @@ export class Buff_Improvements extends IBuff {
         if (GlobalVars.gameMode == GameMode.Survive) {
             this.ImprovementsBuffsClass = [
                 //Buff_Reroll,
-                Buff_Adrenaline,
+                //Buff_Adrenaline,
                 Buff_EagleEye,
                 Buff_PeriodIncomeGold,
                 Buff_PeriodHealing,
@@ -1405,5 +1410,5 @@ export class Buff_Improvements extends IBuff {
 }
 
 export function GetBuffsClass() : Array<typeof IBuff> {
-    return Buff_Improvements.GetBuffs();
+    return Buff_Improvements.GetBuffs()
 }

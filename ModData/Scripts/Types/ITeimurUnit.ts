@@ -33,6 +33,9 @@ export class ITeimurUnit extends IUnit {
         this._unitPrevCell      = new Cell();
         this.needDeleted        = false;
         this.patrolPointIndex   = -1;
+
+        // Устанавливаем более частую обработку AI для врагов
+        this.processingRate = 15;
     }
 
     protected _Logic_PatrolPath (gameTickNum: number) {
@@ -139,7 +142,7 @@ export class ITeimurUnit extends IUnit {
         this.GivePointCommand(goalPosition.value, UnitCommand.Attack, AssignOrderMode.Queue);
     }
 
-    public OnEveryTick(gameTickNum: number) {
+    public OnScheduledEvent(gameTickNum: number) {
         switch (GlobalVars.gameMode) {
             case GameMode.KeepLimits:
                 this._Logic_PatrolPath(gameTickNum);
@@ -148,6 +151,9 @@ export class ITeimurUnit extends IUnit {
                 this._Logic_AttackTower(gameTickNum);
                 break;
         }
+
+        // Планируем следующий вызов
+        super.OnScheduledEvent(gameTickNum);
     }
 
     public static InitConfig() {
@@ -162,26 +168,6 @@ export class ITeimurUnit extends IUnit {
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "ProducedPeople", 0);
         // убираем налоги
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "SalarySlots", 0);
-        // уменьшаем скорость в 2 раза
-        // var tylesType = [
-        //     TileType.Grass,
-        //     TileType.Forest,
-        //     TileType.Water,
-        //     TileType.Marsh,
-        //     TileType.Sand,
-        //     TileType.Mounts,
-        //     TileType.Road,
-        //     TileType.Ice
-        // ];
-        // for (var tileNum = 0; tileNum < tylesType.length; tileNum++) {
-        //     var newSpeed = GlobalVars.configs[this.CfgUid].Speeds.Item.get(tylesType[tileNum]);
-        //     if (newSpeed > 2) {
-        //         newSpeed = Math.floor(newSpeed / 2);
-        //     } else if (newSpeed > 0) {
-        //         newSpeed = 1;
-        //     }
-        //     GlobalVars.configs[this.CfgUid].Speeds.Item.set(tylesType[tileNum], newSpeed);
-        // }
 
         // проверяем, может ли юнит атаковать здания
         if (GlobalVars.configs[this.CfgUid].MainArmament && GlobalVars.configs[this.CfgUid].MainArmament.BulletConfig.DisallowedTargets.HasFlag(UnitQueryFlag.Buildings)) {
@@ -191,6 +177,10 @@ export class ITeimurUnit extends IUnit {
         // технику делаем незахватываемой
         if (GlobalVars.configs[this.CfgUid].ProfessionParams.ContainsKey(UnitProfession.Capturable)) {
             GlobalVars.configs[this.CfgUid].ProfessionParams.Remove(UnitProfession.Capturable);
+        }
+
+        if (GlobalVars.gameMode == GameMode.KeepLimits) {
+            this.DamageBase = 0;
         }
     }
 

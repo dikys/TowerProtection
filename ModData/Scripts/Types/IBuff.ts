@@ -1,8 +1,9 @@
 import { GlobalVars } from "../GlobalData";
+import { ISchedulable } from "../ShedulerSystem";
 import { CreateUnitConfig } from "../Utils";
 import { UnitFlags } from "library/game-logic/horde-types";
 
-export class IBuff {
+export class IBuff implements ISchedulable {
     static CfgUid      : string = "";
     static BaseCfgUid  : string = "";
     
@@ -15,15 +16,21 @@ export class IBuff {
     processingTick: number;
     /** модуль на который делится игровой тик, если остаток деления равен processingTick, то юнит обрабатывается */
     processingTickModule: number;
+    
+    private static _ProcessingTickIterator : number = 0;
 
     /** флаг, что юнита нужно удалить из списка юнитов, чтобы отключить обработку */
     needDeleted: boolean;
 
+    /** @description Флаг, указывающий, что бафф использует новую систему планировщика и его не нужно обрабатывать в старом цикле. */
+    usesScheduler: boolean;
+
     constructor (teamNum: number, deleteFlag: boolean = false) {
         this.teamNum              = teamNum;
         this.processingTickModule = 50;
-        this.processingTick       = (GlobalVars.gameTickNum - GlobalVars.gameStateChangedTickNum) % this.processingTickModule;
+        this.processingTick       = IBuff._ProcessingTickIterator++ % this.processingTickModule;
         this.needDeleted          = deleteFlag;
+        this.usesScheduler        = false; // По умолчанию все баффы используют старую систему
     }
 
     public static InitConfig() {
@@ -51,4 +58,10 @@ export class IBuff {
     public OnEveryTick(gameTickNum: number) {}
 
     public OnDead(gameTickNum: number) {}
+
+    /**
+     * @description Метод, который будет вызван планировщиком. 
+     * Логика периодических действий для баффов, использующих планировщик, должна быть здесь.
+     */
+    public OnScheduledEvent(gameTickNum: number) {}
 };

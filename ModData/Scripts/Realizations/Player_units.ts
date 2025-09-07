@@ -24,8 +24,8 @@ export class Player_TOWER_BASE extends IProducerUnit {
         this._armamentsTargetNextNum = new Array<number>();
         this._targetsUnitInfo        = new Array<any>();
 
-        this.processingTickModule   = 150;
-        this.processingTick         = this.unit.PseudoTickCounter % this.processingTickModule;
+        // Устанавливаем более редкую обработку для башни, т.к. сканирование целей - дорогая операция
+        this.processingRate = 150;
     }
 
     public static InitConfig() {
@@ -104,13 +104,10 @@ export class Player_TOWER_BASE extends IProducerUnit {
         return targetUnit;
     }
 
-    public OnEveryTick(gameTickNum: number): void {
-        // модуль нужен, чтобы не каждый тик выполнять дорогостоящие операции
-        if (gameTickNum % this.processingTickModule !== this.processingTick) {
-            return;
-        }
-
+    public OnScheduledEvent(gameTickNum: number): void {
         if (this._armamentsMaxDistance === 0) {
+            // Если дальности нет, то и сканировать нечего. Просто планируем следующий вызов.
+            super.OnScheduledEvent(gameTickNum);
             return;
         }
 
@@ -147,6 +144,9 @@ export class Player_TOWER_BASE extends IProducerUnit {
                 }
             }
         }
+
+        // Планируем следующий вызов
+        super.OnScheduledEvent(gameTickNum);
     }
 }
 

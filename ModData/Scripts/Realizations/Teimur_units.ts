@@ -403,7 +403,7 @@ export class Teimur_Legendary_RAIDER extends ILegendaryUnit {
         this.MaxHealthBase = Math.floor(200 * Math.sqrt(GlobalVars.difficult));
     }
 
-    public OnEveryTick(gameTickNum: number): void {
+    public OnScheduledEvent(gameTickNum: number): void {
         // каждые SpawnPeriod/50 секунд спавним юнитов вокруг всадника
         if (gameTickNum - this.spawnPrevStart > Teimur_Legendary_RAIDER.SpawnPeriod) {
             this.spawnPrevStart = gameTickNum;
@@ -435,24 +435,8 @@ export class Teimur_Legendary_RAIDER extends ILegendaryUnit {
             }
         }
 
-        switch (GlobalVars.gameMode) {
-            case GameMode.KeepLimits:
-                this._Logic_PatrolPath(gameTickNum);
-                break;
-            case GameMode.Survive:
-                // если в очереди меньше 2 приказов, то генерируем новые
-                if (this.unit_ordersMind.OrdersCount <= 1) {
-                    // генерируем 5 рандомных достижимых точек вокруг цели
-                    var generator_  = generateRandomCellInRect(GlobalVars.teams[this.teamNum].towerCell.X - 10, GlobalVars.teams[this.teamNum].towerCell.Y - 10, 20, 20);
-                    var ordersCount = 5 - this.unit_ordersMind.OrdersCount;
-                    for (var position = generator_.next(), orderNum = 0; !position.done && orderNum < ordersCount; position = generator_.next(), orderNum++) {
-                        if (unitCheckPathTo(this.unit, createPoint(position.value.X, position.value.Y))) {
-                            this.unit_ordersMind.AssignSmartOrder(createPoint(position.value.X, position.value.Y), AssignOrderMode.Queue, 100000);
-                        }
-                    }
-                }
-                break;
-        }
+        // Вызываем базовую логику (патрулирование/атака)
+        super.OnScheduledEvent(gameTickNum);
     }
 }
 export class Teimur_Legendary_WORKER extends ILegendaryUnit {
@@ -573,7 +557,7 @@ export class Teimur_Legendary_WORKER extends ILegendaryUnit {
         return ILegendaryUnit.GetSpawnCount.call(this, spawnCount);
     }
 
-    public OnEveryTick(gameTickNum: number): void {
+    public OnScheduledEvent(gameTickNum: number): void {
         // состояние идти на базу врага
         if (this.state == 0) {
             var towerCell = GlobalVars.teams[this.teamNum].towerCell;
@@ -642,6 +626,9 @@ export class Teimur_Legendary_WORKER extends ILegendaryUnit {
             }
         }
         // state = 3, ничего не делаем
+
+        // Планируем следующий вызов
+        super.OnScheduledEvent(gameTickNum);
     }
 
     public OnDead(gameTickNum: number) {
@@ -714,7 +701,7 @@ export class Teimur_Legendary_HORSE extends ILegendaryUnit {
         this.MaxHealthBase = Math.floor(120 * Math.sqrt(GlobalVars.difficult));
     }
 
-    public OnEveryTick(gameTickNum: number): void {
+    public OnScheduledEvent(gameTickNum: number): void {
         // каждые CapturePeriod/50 секунд захватываем юнитов в пределах захвата
         if (this.captureUnits.length < Teimur_Legendary_HORSE.CaptureUnitsLimit &&
             gameTickNum - this.capturePrevStart > Teimur_Legendary_HORSE.CapturePeriod &&
@@ -767,24 +754,8 @@ export class Teimur_Legendary_HORSE extends ILegendaryUnit {
             }
         }
 
-        switch (GlobalVars.gameMode) {
-            case GameMode.KeepLimits:
-                this._Logic_PatrolPath(gameTickNum);
-                break;
-            case GameMode.Survive:
-                // если в очереди меньше 2 приказов, то генерируем новые
-                if (this.unit_ordersMind.OrdersCount <= 1) {
-                    // генерируем 5 рандомных достижимых точек вокруг цели
-                    var generator_  = generateRandomCellInRect(GlobalVars.teams[this.teamNum].towerCell.X - 10, GlobalVars.teams[this.teamNum].towerCell.Y - 10, 20, 20);
-                    var ordersCount = 5 - this.unit_ordersMind.OrdersCount;
-                    for (var position = generator_.next(), orderNum = 0; !position.done && orderNum < ordersCount; position = generator_.next(), orderNum++) {
-                        if (unitCheckPathTo(this.unit, createPoint(position.value.X, position.value.Y))) {
-                            this.unit_ordersMind.AssignSmartOrder(createPoint(position.value.X, position.value.Y), AssignOrderMode.Queue, 100000);
-                        }
-                    }
-                }
-                break;
-        }
+        // Вызываем базовую логику (патрулирование/атака)
+        super.OnScheduledEvent(gameTickNum);
     }
 
     public OnDead(gameTickNum: number) {
@@ -816,15 +787,15 @@ export class Teimur_RevivedUnit extends ITeimurUnit {
         this.reviveTickNum = -1;
     }
 
-    public OnEveryTick(gameTickNum: number) {
+    public OnScheduledEvent(gameTickNum: number) {
         if (this.reviveTickNum < 0) {
             this.reviveTickNum = gameTickNum;
         } else if (this.reviveTickNum + Teimur_RevivedUnit.LifeTime < gameTickNum) {
             this.unit.BattleMind.InstantDeath(null, UnitHurtType.Mele);
-            return;
+            return; // Не планируем следующий вызов, т.к. юнит мертв
         }
 
-        ITeimurUnit.prototype.OnEveryTick.call(this, gameTickNum);
+        super.OnScheduledEvent(gameTickNum);
     }
 }
 export class Teimur_Legendary_DARK_DRAIDER extends ILegendaryUnit {
@@ -850,8 +821,7 @@ export class Teimur_Legendary_DARK_DRAIDER extends ILegendaryUnit {
         this.reviveUnits     = new Array<Teimur_RevivedUnit>();
 
         // поскольку трупы на карте живут не долго, то делаем обработку юнита чаще
-        this.processingTickModule   = 10;
-        this.processingTick         = this.unit.PseudoTickCounter % this.processingTickModule;
+        this.processingRate = 10;
     }
 
     static InitConfig() {
@@ -879,7 +849,7 @@ export class Teimur_Legendary_DARK_DRAIDER extends ILegendaryUnit {
         this.MaxHealthBase = Math.floor(250 * Math.sqrt(GlobalVars.difficult));
     }
 
-    public OnEveryTick(gameTickNum: number): void {
+    public OnScheduledEvent(gameTickNum: number): void {
         // ресаем юнитов
         {
             this.revivePrevStart = gameTickNum;
@@ -939,7 +909,7 @@ export class Teimur_Legendary_DARK_DRAIDER extends ILegendaryUnit {
             }
         }
 
-        ITeimurUnit.prototype.OnEveryTick.call(this, gameTickNum);
+        super.OnScheduledEvent(gameTickNum);
     }
 
     public OnDead(gameTickNum: number) {
@@ -1011,9 +981,7 @@ export class Teimur_Legendary_FIRE_MAGE extends ILegendaryUnit {
         this.MaxHealthBase = Math.floor(120 * Math.sqrt(GlobalVars.difficult));
     }
 
-    public OnEveryTick(gameTickNum: number): void {
-        ITeimurUnit.prototype.OnEveryTick.call(this, gameTickNum);
-
+    public OnScheduledEvent(gameTickNum: number): void {
         // кастуем огненную вспышку вокруг себя
         if (this.spellFireFlashPrevCast + Teimur_Legendary_FIRE_MAGE.SpellFireFlashCooldown < gameTickNum) {
             this.spellFireFlashPrevCast = gameTickNum;
@@ -1031,6 +999,8 @@ export class Teimur_Legendary_FIRE_MAGE extends ILegendaryUnit {
                 }
             }
         }
+
+        super.OnScheduledEvent(gameTickNum);
     }
 
     protected static Fireball_initializeWorker(bull: any, emitArgs: any) {
@@ -1197,28 +1167,8 @@ export class Teimur_Legendary_GREED_HORSE extends ILegendaryUnit {
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "PressureResist", 21);
     }
 
-    public OnEveryTick(gameTickNum: number): void {
-        switch (GlobalVars.gameMode) {
-            case GameMode.KeepLimits:
-                this._Logic_PatrolPath(gameTickNum);
-                break;
-            case GameMode.Survive:
-                // если в очереди меньше 2 приказов, то генерируем новые
-                if (this.unit_ordersMind.OrdersCount <= 1) {
-                    // генерируем 5 рандомных достижимых точек вокруг цели
-                    var generator_  = generateRandomCellInRect(GlobalVars.teams[this.teamNum].towerCell.X - 10, GlobalVars.teams[this.teamNum].towerCell.Y - 10, 20, 20);
-                    var ordersCount = 5 - this.unit_ordersMind.OrdersCount;
-                    for (var position = generator_.next(), orderNum = 0; !position.done && orderNum < ordersCount; position = generator_.next(), orderNum++) {
-                        if (unitCheckPathTo(this.unit, createPoint(position.value.X, position.value.Y))) {
-                            this.unit_ordersMind.AssignSmartOrder(createPoint(position.value.X, position.value.Y), AssignOrderMode.Queue, 100000);
-                        }
-                    }
-                }
-                break;
-        }
-
+    public OnScheduledEvent(gameTickNum: number): void {
         // отсчет
-
         if (!this.isChallengeEnd) {
             if (this.countdownStartTick >= 0) {
                 if (this.countdownStartTick + Teimur_Legendary_GREED_HORSE.CountdownTicks < gameTickNum) {
@@ -1238,11 +1188,15 @@ export class Teimur_Legendary_GREED_HORSE extends ILegendaryUnit {
             } else {
                 // отлавливаем первый удар
                 if (this.unit.Health != GlobalVars.configs[Teimur_Legendary_GREED_HORSE.CfgUid].MaxHealth) {
+                    this.countdownStartTick = gameTickNum;
                     let msg2 = createGameMessageWithSound("Обратный отсчет начался!", createHordeColor(255, 255, 50, 10));
                     GlobalVars.teams[this.teamNum].settlement.Messages.AddMessage(msg2);
                 }
             }
         }
+
+        // Вызываем базовую логику (патрулирование/атака)
+        super.OnScheduledEvent(gameTickNum);
     }
 
     public OnDead(gameTickNum: number) {

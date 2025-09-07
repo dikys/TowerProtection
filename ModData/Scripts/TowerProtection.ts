@@ -17,6 +17,7 @@ import { Buff_Improvements, Buff_PeriodHealing, Buff_PeriodIncomeGold, GetBuffsC
 import { IBuff } from "./Types/IBuff";
 import { spawnString } from "library/game-logic/decoration-spawn";
 import { ILegendaryUnit } from "./Types/ILegendaryUnit";
+import { Scheduler } from "./ShedulerSystem";
 
 export class TowerProtection extends HordePluginBase {
     //@ts-ignore
@@ -76,6 +77,7 @@ export class TowerProtection extends HordePluginBase {
 
         GlobalVars.units           = new Array<IUnit>();
         GlobalVars.buffs           = new Array<IBuff>();
+        GlobalVars.scheduler       = new Scheduler();
 
         GlobalVars.gameStateChangedTickNum = 0;
         GlobalVars.Players         = Players;
@@ -536,7 +538,7 @@ export class TowerProtection extends HordePluginBase {
         // смещаем номер такта, чтобы время считалось относительно начала игры
         gameTickNum -= GlobalVars.gameStateChangedTickNum;
 
-        var FPS = HordeResurrection.Engine.Logic.Battle.BattleController.GameTimer.CurrentFpsLimit;
+        var FPS = HordeResurrection.Engine.Logic.Battle.BattleController.FpsCounter.CurrentFps;
 
         // ==================================================
         //      ЛОГИКА РЕЖИМА ВЫЖИВАНИЯ
@@ -774,23 +776,11 @@ export class TowerProtection extends HordePluginBase {
         time     = new Date().getTime();
         for (var unitNum = 0; unitNum < GlobalVars.units.length; unitNum++) {
             const unit = GlobalVars.units[unitNum];
-            // настало время для обработки юнита
-            if (gameTickNum % unit.processingTickModule == unit.processingTick) {
-                const unitTickTime = new Date().getTime();
-                // юнит умер, удаляем из списка
-                if (unit.unit.IsDead) {
-                    unit.OnDead(gameTickNum);
-                    GlobalVars.units.splice(unitNum--, 1);
-                }
-                // юнит сам запросил, что его нужно удалить из списка
-                else if (unit.needDeleted) {
-                    GlobalVars.units.splice(unitNum--, 1);
-                }
-                // иначе update
-                else {
-                    unit.OnEveryTick(gameTickNum);
-                }
-                const tickTime = new Date().getTime() - unitTickTime;
+            
+            // Основная логика юнитов теперь в OnScheduledEvent.
+            // Здесь мы только обрабатываем удаление мертвых или ненужных юнитов.
+            if (unit.needDeleted) {
+                GlobalVars.units.splice(unitNum--, 1);
             }
         }
         this.timers.set("Units", (this.timers.get("Units") || 0) + new Date().getTime() - time);
@@ -798,8 +788,31 @@ export class TowerProtection extends HordePluginBase {
         // обработка баффов (41 %)
 
         time     = new Date().getTime();
+
+        // Корректируем лимит планировщика раз в секунду
+        if (gameTickNum % 50 == 0) {
+            var limit = GlobalVars.scheduler.AdjustLimit(FPS);
+            if (gameTickNum % 50 * 60 * 5 == 0) {
+                this.log.info("scheduler::limit = ", limit, " FPS " , FPS)
+            }
+        }
+
+        // Запускаем обработку событий из планировщика
+        GlobalVars.scheduler.Execute(gameTickNum);
+
         for (var buffNum = 0; buffNum < GlobalVars.buffs.length; buffNum++) {
             const buff = GlobalVars.buffs[buffNum];
+
+            // Пропускаем баффы, которые работают через новый планировщик
+            if (buff.usesScheduler) {
+                // нужно проверять только удаление, т.к. такие баффы могут быть удалены (например, при продаже)
+                if (buff.needDeleted) {
+                    buff.OnDead(gameTickNum);
+                    GlobalVars.buffs.splice(buffNum--, 1);
+                }
+                continue;
+            }
+
             // бафф сам запросил, что его нужно удалить из списка
             if (buff.needDeleted) {
                 buff.OnDead(gameTickNum);
