@@ -553,7 +553,7 @@ export class TowerProtection extends HordePluginBase {
                         playerCount++;
                     }
                 }
-                let maxEnemies = 300 + 100 * playerCount;
+                let maxEnemies = 300 + 50 * playerCount;
 
                 // Update decorator text and color
                 if (this.survivalStringDecorationObjs) {
