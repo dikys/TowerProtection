@@ -15,6 +15,7 @@ export class Player_TOWER_BASE extends IProducerUnit {
     private _armamentsTargetEndNum  : Array<number>;
     private _armamentsTargetNextNum : Array<number>;
     private _targetsUnitInfo        : Array<any>;
+    private accountedKills          : number;
 
     constructor (unit: any, teamNum: number) {
         super(unit, teamNum);
@@ -23,6 +24,7 @@ export class Player_TOWER_BASE extends IProducerUnit {
         this._armamentsTargetEndNum  = new Array<number>();
         this._armamentsTargetNextNum = new Array<number>();
         this._targetsUnitInfo        = new Array<any>();
+        this.accountedKills          = 0;
 
         // Устанавливаем более редкую обработку для башни, т.к. сканирование целей - дорогая операция
         this.processingRate = 150;
@@ -109,6 +111,13 @@ export class Player_TOWER_BASE extends IProducerUnit {
     }
 
     public OnScheduledEvent(gameTickNum: number): void {
+        // Расчет инкома за киллы
+        const newKills = this.unit.KillsCounter - this.accountedKills;
+        if (newKills > 0) {
+            GlobalVars.teams[this.teamNum].incomeGold += newKills * 2;
+            this.accountedKills = this.unit.KillsCounter;
+        }
+
         if (this._armamentsMaxDistance === 0) {
             // Если дальности нет, то и сканировать нечего. Просто планируем следующий вызов.
             super.OnScheduledEvent(gameTickNum);
