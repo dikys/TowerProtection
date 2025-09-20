@@ -2,7 +2,7 @@ import { UnitProfession, UnitProducerProfessionParams } from "library/game-logic
 import { IUnit } from "../Types/IUnit";
 import { CfgAddUnitProducer, ChebyshevDistance, CreateUnitConfig, setUnitStateWorker } from "../Utils";
 import { AttackPlansClass } from "./AttackPlans";
-import { CFGPrefix, GlobalVars, ReplaceUnitParameters } from "../GlobalData";
+import { CFGPrefix, GameMode, GlobalVars, ReplaceUnitParameters } from "../GlobalData";
 import { Unit, UnitCommand, UnitState } from "library/game-logic/horde-types";
 import { iterateOverUnitsInBox } from "library/game-logic/unit-and-map";
 import { IProducerUnit } from "../Types/IProducerUnit";
@@ -32,7 +32,11 @@ export class Player_TOWER_BASE extends IProducerUnit {
         IProducerUnit.InitConfig.call(this);
 
         // ХП
-        ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "MaxHealth", 3000);
+        if (GlobalVars.gameMode == GameMode.KeepLimits) {
+            ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "MaxHealth", 20000);
+        } else {
+            ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "MaxHealth", 3000);
+        }
         // мин ХП
         ScriptUtils.SetValue(GlobalVars.configs[this.CfgUid], "MinHealth", 0);
         // Броня

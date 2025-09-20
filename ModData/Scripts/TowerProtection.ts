@@ -739,7 +739,7 @@ export class TowerProtection extends HordePluginBase {
         // инком
 
         time     = new Date().getTime();
-        if (gameTickNum % 100 == 2) {
+        if (gameTickNum % 50 == 2) {
             for (var teamNum = 0; teamNum < GlobalVars.teams.length; teamNum++) {
                 if (!GlobalVars.teams[teamNum].inGame ||
                     GlobalVars.teams[teamNum].tower.unit.IsDead) {
@@ -788,14 +788,6 @@ export class TowerProtection extends HordePluginBase {
         // обработка баффов (41 %)
 
         time     = new Date().getTime();
-
-        // Корректируем лимит планировщика раз в секунду
-        if (gameTickNum % 50 == 0) {
-            var limit = GlobalVars.scheduler.AdjustLimit(FPS);
-            if (gameTickNum % 50 * 60 * 5 == 0) {
-                this.log.info("scheduler::limit = ", limit, " FPS " , FPS)
-            }
-        }
 
         // Запускаем обработку событий из планировщика
         GlobalVars.scheduler.Execute(gameTickNum);

@@ -34,10 +34,7 @@ class ScheduledEvent {
 export class Scheduler {
     private eventQueue: ScheduledEvent[] = [];
 
-    // --- Динамический лимит для контроля FPS ---
-    private executionLimit: number = 10; // Начальное значение
-    private readonly minExecutionLimit: number = 4;   // Минимальный лимит
-    private readonly maxExecutionLimit: number = 100;  // Максимальный лимит
+    private executionLimit: number = 8;
 
     /**
      * @description Планирует выполнение события для объекта в указанный тик.
@@ -77,21 +74,6 @@ export class Scheduler {
                 executedCount++;
             }
         }
-    }
-
-    /**
-     * @description Корректирует лимит выполняемых за тик событий на основе текущего FPS.
-     * @param currentFPS Текущий FPS в игре.
-     */
-    public AdjustLimit(currentFPS: number) : number {
-        if (currentFPS < 44) {
-            // Уменьшаем лимит на 10%, но не ниже минимального
-            this.executionLimit = Math.max(this.minExecutionLimit, Math.floor(this.executionLimit * 0.9));
-        } else if (currentFPS > 48) {
-            // Увеличиваем лимит на 10%, но не выше максимального
-            this.executionLimit = Math.min(this.maxExecutionLimit, Math.ceil(this.executionLimit * 1.1));
-        }
-        return this.executionLimit;
     }
 }
 

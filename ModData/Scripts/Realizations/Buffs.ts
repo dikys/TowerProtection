@@ -1,9 +1,10 @@
-import { PointCommandArgs, Unit, UnitArmament, UnitCommand, UnitDirection, UnitFlags, UnitMapLayer } from "library/game-logic/horde-types";
+import { PointCommandArgs, Unit, UnitArmament, UnitCommand, UnitDirection, UnitFlags, UnitMapLayer, DrawLayer } from "library/game-logic/horde-types";
 import { CFGPrefix, GameMode, GlobalVars } from "../GlobalData";
 import { IBuff } from "../Types/IBuff";
 import { Player_TOWER_BASE, PlayerTowersClass } from "./Player_units";
 import { createHordeColor, createPF, createPoint } from "library/common/primitives";
 import { spawnBullet } from "library/game-logic/bullet-spawn";
+import { spawnString } from "library/game-logic/decoration-spawn";
 import { UnitProducerProfessionParams, UnitProfession } from "library/game-logic/unit-professions";
 import { IUnit } from "../Types/IUnit";
 import { createGameMessageWithNoSound } from "library/common/messages";
@@ -295,12 +296,26 @@ export class Buff_DoublingMaxBuff extends IBuff {
 export class Buff_PeriodIncomeGold extends IBuff {
     static CfgUid         : string = "#" + CFGPrefix + "_Buff_PeriodIncomeGold";
     static BaseCfgUid     : string = "#UnitConfig_Slavyane_Mine";
-    static Period         : number = 250;
-    static IncomeGold     : number = 10;
+    static Period         : number = 50;
+    static IncomeGold     : number = 2;
+    static MaxCount       : number = 7;
+
+    static TeamsLevel     : Array<number>;
 
     constructor(teamNum: number) {
         super(teamNum);
         this.usesScheduler = true;
+
+        // для оптимизации усиливаем первый бафф и удаляем новые
+        const ctor = this.constructor as typeof Buff_PeriodIncomeGold;
+        if (!ctor.TeamsLevel) {
+            ctor.TeamsLevel = new Array<number>(GlobalVars.teams.length).fill(0);
+        }
+        ctor.TeamsLevel[teamNum]++;
+        if (ctor.TeamsLevel[teamNum] > 1) {
+            this.needDeleted = true;
+            return;
+        }
 
         // Сразу планируем первое получение золота
         GlobalVars.scheduler.Schedule(this, GlobalVars.gameTickNum + Buff_PeriodIncomeGold.Period);
@@ -319,13 +334,9 @@ export class Buff_PeriodIncomeGold extends IBuff {
     }
 
     public OnScheduledEvent(gameTickNum: number) {
-        // Если бафф был удален, ничего не делаем
-        if (this.needDeleted) {
-            return;
-        }
-
         // Добавляем золото
-        GlobalVars.teams[this.teamNum].incomeGold += Buff_PeriodIncomeGold.IncomeGold;
+        const income = Buff_PeriodIncomeGold.IncomeGold * (this.constructor as typeof Buff_PeriodIncomeGold).TeamsLevel[this.teamNum];
+        GlobalVars.teams[this.teamNum].incomeGold += income;
 
         // Планируем следующее получение золота
         GlobalVars.scheduler.Schedule(this, gameTickNum + Buff_PeriodIncomeGold.Period);
@@ -534,9 +545,11 @@ export class DefenderUnit extends IUnit {
     patrolRadius       : number;
     //@ts-ignore
     patrolMaxRadius    : number;
+    accountedKills     : number;
 
     constructor (unit: Unit, teamNum: number) {
         super(unit, teamNum);
+        this.accountedKills = 0;
 
         // Ускоряем обработку AI для защитников
         this.processingRate = 10; // Каждые 0.2 секунды
@@ -550,6 +563,15 @@ export class DefenderUnit extends IUnit {
         disallowedCommands.Add(UnitCommand.Capture, 1);
         disallowedCommands.Add(UnitCommand.StepAway, 1);
         disallowedCommands.Add(UnitCommand.Cancel, 1);
+    }
+
+    public OnEveryTick(gameTickNum: number) {
+        // передаем киллы башне
+        const unaccountedKills = this.unit.KillsCounter - this.accountedKills;
+        if (unaccountedKills > 0) {
+            GlobalVars.teams[this.teamNum].tower.unit.KillsCounter += unaccountedKills;
+            this.accountedKills = this.unit.KillsCounter;
+        }
     }
 
     public OnScheduledEvent(gameTickNum: number): void {
@@ -720,10 +742,13 @@ export abstract class IBuff_Defender_Unit extends IBuff {
         // 1. Убираем мертвых защитников из списка
         let defendersCountBefore = this.defenders.length;
         this.defenders = this.defenders.filter(def => {
+            // передаем оставшиеся киллы башне
+            const unaccountedKills = def.unit.KillsCounter - def.accountedKills;
+            if (unaccountedKills > 0) {
+                GlobalVars.teams[this.teamNum].tower.unit.KillsCounter += unaccountedKills;
+                def.accountedKills = def.unit.KillsCounter;
+            }
             if (def.unit.IsDead) {
-                if (!def.needDeleted) {
-                    GlobalVars.teams[this.teamNum].tower.unit.KillsCounter += def.unit.KillsCounter;
-                }
                 def.needDeleted = true;
                 return false;
             }
